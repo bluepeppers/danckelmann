@@ -1,12 +1,12 @@
 package resources
 
 import (
+	"log"
 	"os"
-	"regexp"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
-	"log"
 
 	"github.com/bluepeppers/allegro"
 )
@@ -17,14 +17,14 @@ const (
 )
 
 var (
-	positionRegexp = regexp.MustCompile(`\d+,\d+`)
+	positionRegexp   = regexp.MustCompile(`\d+,\d+`)
 	dimensionsRegexp = regexp.MustCompile(`\d+,\d+`)
-	sizeRegexp = regexp.MustCompile(`\d+`)
+	sizeRegexp       = regexp.MustCompile(`\d+`)
 )
 
 // Information on how to load a tile resouce.
 type TileConfig struct {
-	Name string
+	Name     string
 	Filename string
 
 	// Set any of these to 0 to use the default values
@@ -36,7 +36,7 @@ type FontConfig struct {
 	Name string
 	// If filename is `builtin`, will not check file exists
 	Filename string
-	Size int
+	Size     int
 }
 
 type ResourceManagerConfig struct {
@@ -50,7 +50,7 @@ func LoadResourceManagerConfig(directory string, prefix string) (*ResourceManage
 	if !os.IsNotExist(err) {
 		return nil, false
 	}
-	
+
 	var rmConfig ResourceManagerConfig
 	rawConfig := allegro.LoadConfig(configFilename)
 	for sectionName := range rawConfig.IterSections() {
@@ -61,7 +61,7 @@ func LoadResourceManagerConfig(directory string, prefix string) (*ResourceManage
 			log.Printf("Skipping section")
 			continue
 		}
-		switch (resourceType) {
+		switch resourceType {
 		case "tile":
 			tileConfig, ok := loadTileConfig(rawConfig, sectionName, prefix, directory)
 			if ok {
@@ -91,7 +91,7 @@ func LoadResourceManagerConfig(directory string, prefix string) (*ResourceManage
 				log.Printf("Skipping directory")
 				break
 			}
-			
+
 			subPrefix := prefix + "." + sectionName
 			subConfig, ok := LoadResourceManagerConfig(dirname, subPrefix)
 			if ok {
@@ -107,7 +107,7 @@ func loadTileConfig(rawConfig *allegro.Config, name, prefix, directory string) (
 	var tileConf TileConfig
 
 	tileConf.Name = prefix + "." + name
-	
+
 	fname, ok := rawConfig.Get(name, "filename")
 	if !ok {
 		log.Printf("Resource %v has no filename field")
@@ -123,7 +123,7 @@ func loadTileConfig(rawConfig *allegro.Config, name, prefix, directory string) (
 		return tileConf, false
 	}
 	tileConf.Filename = filename
-	
+
 	position, ok := rawConfig.Get(name, "position")
 	if !ok {
 		position = "0,0"
@@ -140,7 +140,7 @@ func loadTileConfig(rawConfig *allegro.Config, name, prefix, directory string) (
 	y, _ := strconv.Atoi(split[1])
 	tileConf.X = x
 	tileConf.Y = y
-	
+
 	dimensions, ok := rawConfig.Get(name, "dimensions")
 	if !ok {
 		dimensions = "0,0"
@@ -163,7 +163,7 @@ func loadFontConfig(rawConfig *allegro.Config, name, prefix, directory string) (
 	var fontConf FontConfig
 
 	fontConf.Name = prefix + "." + name
-	
+
 	fname, ok := rawConfig.Get(name, "filename")
 	if !ok {
 		log.Printf("Resource %v has no filename field")
@@ -197,7 +197,7 @@ func loadFontConfig(rawConfig *allegro.Config, name, prefix, directory string) (
 	}
 	size, _ := strconv.Atoi(strSize)
 	fontConf.Size = size
-	
+
 	return fontConf, true
 }
 

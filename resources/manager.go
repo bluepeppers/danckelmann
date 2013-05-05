@@ -6,16 +6,16 @@ import (
 
 // Infomation about a tile in the atlas
 type tileMetadata struct {
-	index int
+	index      int
 	x, y, w, h int
-	name string
+	name       string
 }
 
 type ResourceManager struct {
-	tileAtlas *allegro.Bitmap
+	tileAtlas     *allegro.Bitmap
 	tileMetadatas []tileMetadata
 	tilePositions map[string]int
-	
+
 	fontMap map[string]*allegro.Font
 }
 
@@ -39,7 +39,7 @@ func CreateResourceManager(config *ResourceManagerConfig) (*ResourceManager, boo
 		if bmpw < x {
 			x = 0
 			w = bmpw
-		} else if bmpw < x + cfg.W {
+		} else if bmpw < x+cfg.W {
 			w = bmpw - x
 		} else {
 			w = cfg.W
@@ -47,12 +47,12 @@ func CreateResourceManager(config *ResourceManagerConfig) (*ResourceManager, boo
 		if bmph < y {
 			y = 0
 			h = bmph
-		} else if bmph < y + cfg.H {
+		} else if bmph < y+cfg.H {
 			h = bmph - y
 		} else {
 			h = cfg.H
 		}
-		
+
 		if h > maxHeight {
 			maxHeight = h
 		}
@@ -60,12 +60,12 @@ func CreateResourceManager(config *ResourceManagerConfig) (*ResourceManager, boo
 
 		tileMetadatas[i] = tileMetadata{i, x, y, w, h, cfg.Name}
 	}
-	
+
 	atlas := allegro.NewBitmap(totalWidth, maxHeight)
 
 	atlas.SetTargetBitmap()
 	allegro.HoldBitmapDrawing(true)
-	
+
 	currentPos := 0
 	for i := 0; i < len(tileBmps); i++ {
 		bmp := tileBmps[i]
@@ -111,4 +111,9 @@ func (rm *ResourceManager) GetTile(name string) (*allegro.Bitmap, bool) {
 	sub := rm.tileAtlas.CreateSubBitmap(metadata.x, metadata.y,
 		metadata.w, metadata.h)
 	return sub, sub != nil
+}
+
+func (rm *ResourceManager) GetFont(name string) (*allegro.Font, bool) {
+	font, ok := rm.fontMap[name]
+	return font, font != nil
 }
