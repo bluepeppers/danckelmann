@@ -53,8 +53,7 @@ func LoadResourceManagerConfig(directory string, prefix string) (*ResourceManage
 
 	var rmConfig ResourceManagerConfig
 	rawConfig := allegro.LoadConfig(configFilename)
-	log.Printf("%v", rawConfig.GetSections())
-	for _, sectionName := range rawConfig.GetSections() {
+	for sectionName := range rawConfig.IterSections() {
 		resourceType, ok := rawConfig.Get(sectionName, "type")
 		if !ok {
 			log.Printf("Section %v of %v resource file has no type field",

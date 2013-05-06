@@ -97,24 +97,24 @@ func CreateDisplayEngine(resourceDir string, conf *allegro.Config, gameEngine Ga
 }
 
 func createDisp(conf *allegro.Config) *allegro.Display {
-	width := config.GetInt(conf, "display", "width", DEFAULT_WIDTH)
-	height := config.GetInt(conf, "display", "height", DEFAULT_HEIGHT)
+	/*	width := config.GetInt(conf, "display", "width", DEFAULT_WIDTH)
+		height := config.GetInt(conf, "display", "height", DEFAULT_HEIGHT)*/
 
 	flags := allegro.RESIZABLE
-	switch config.GetString(conf, "display", "windowed", "windowed") {
+	switch config.GetString(conf, "display", "windowed", "fullscreenwindow") {
 	case "fullscreen":
 		flags |= allegro.FULLSCREEN
-	case "fullscreenwindow":
-		flags |= allegro.FULLSCREEN_WINDOW
-	default:
-		log.Printf("display.windowed not one of \"fullscreen\", \"fullscreenwindow\", or \"windowed\"")
-		log.Printf("Defaulting to display.windowed=\"windowed\"")
-		fallthrough
 	case "windowed":
 		flags |= allegro.WINDOWED
+	default:
+		log.Printf("display.windowed not one of \"fullscreen\", \"fullscreenwindow\", or \"windowed\"")
+		log.Printf("Defaulting to display.windowed=\"fullscreenwindow\"")
+		fallthrough
+	case "fullscreenwindow":
+		flags |= allegro.FULLSCREEN_WINDOW
 	}
 
-	disp := allegro.CreateDisplay(width, height, flags)
+	disp := allegro.CreateDisplay(1, 1, flags)
 	if disp == nil {
 		log.Fatalf("Could not create display")
 	}
@@ -143,7 +143,7 @@ func (d *DisplayEngine) Run() {
 	d.running = true
 	d.statusLock.Unlock()
 
-	go d.eventHandler()
+	go displayEngine.eventHandler()
 
 	start := time.Now()
 	frames := 0
@@ -156,7 +156,7 @@ func (d *DisplayEngine) Run() {
 		running = d.running
 		d.statusLock.RUnlock()
 		fps := float64(frames) / time.Since(start).Seconds()
-		log.Printf("FPS: %v", fps)
+		_ = fps
 	}
 
 }
@@ -176,19 +176,21 @@ func (d *DisplayEngine) drawFrame() {
 
 	// Don't want anyone changing the viewport mid frame or any such highjinks
 	d.drawLock.RLock()
+	d.viewport.W, d.viewport.H = d.display.GetDimensions()
 	viewport := d.viewport
 	d.drawLock.RUnlock()
 	d.display.SetTargetBackbuffer()
 	d.config.BGColor.Clear()
 
+	allegro.HoldBitmapDrawing(true)
 	for p := 0; p < drawPasses; p++ {
 		m := d.config.MapW
 		n := d.config.MapH
 		for s := 0; s < m+n; s++ {
 			for x := 0; x < s; x++ {
-				y := s - x
+				y := s - x - 1
 
-				if x >= m || y < 0 || y >= m {
+				if x >= m || y < 0 || y >= n {
 					continue
 				}
 
@@ -212,6 +214,7 @@ func (d *DisplayEngine) drawFrame() {
 		d.drawLock.RUnlock()
 	}
 
+	allegro.HoldBitmapDrawing(false)
 	allegro.Flip()
 
 	d.frameDrawing.Unlock()
