@@ -62,39 +62,38 @@ func (d *DisplayEngine) handleResize(ev allegro.DisplayResizeEvent) {
 
 func (d *DisplayEngine) handleMouseDown(event allegro.MouseButtonDown) {
 	if event.Button == 1 {
-		d.startScrolling(event)
+		go d.startScrolling(event)
 	}
 }
 
 func (d *DisplayEngine) startScrolling(start allegro.MouseButtonDown) {
-	go func() {
-		timer := allegro.CreateTimer(float64(1)/20)
+	timer := allegro.CreateTimer(float64(1)/20)
 		es := []*allegro.EventSource{allegro.GetMouseEventSource(),
-			timer.GetEventSource()}
-		timer.Start()
+		timer.GetEventSource()}
+	timer.Start()
+	defer timer.Destroy()
 
-		x, y := start.X, start.Y
-		running := true
-		for ev := range allegro.GetEvents(es) {
-			switch tev := ev.(type) {
-			case allegro.MouseButtonUp:
-				if tev.Button == start.Button {
-					running = false
-				}
-			case allegro.TimerEvent:
-				d.drawLock.Lock()
-				d.viewport.X += (x - start.X)/20
-				d.viewport.Y += (y - start.Y)/20
-				d.drawLock.Unlock()
-			case allegro.MouseAxesEvent:
-				x, y = tev.X, tev.Y
+	x, y := start.X, start.Y
+	running := true
+	for ev := range allegro.GetEvents(es) {
+		switch tev := ev.(type) {
+		case allegro.MouseButtonUp:
+			if tev.Button == start.Button {
+				running = false
 			}
-			d.statusLock.RLock()
-			running = d.running && running
-			d.statusLock.RUnlock()
-			if !running {
-				break
-			}
+		case allegro.TimerEvent:
+			d.drawLock.Lock()
+			d.viewport.X += (x - start.X)/20
+			d.viewport.Y += (y - start.Y)/20
+			d.drawLock.Unlock()
+		case allegro.MouseAxesEvent:
+			x, y = tev.X, tev.Y
 		}
-	}()
+		d.statusLock.RLock()
+		running = d.running && running
+		d.statusLock.RUnlock()
+		if !running {
+			break
+		}
+	}
 }
