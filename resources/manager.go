@@ -19,7 +19,7 @@ type ResourceManager struct {
 	fontMap map[string]*allegro.Font
 }
 
-func CreateResourceManager(config *ResourceManagerConfig) (*ResourceManager, bool) {
+func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 	tileConfs := make([]TileConfig, 0)
 	for _, v := range config.TileConfigs {
 		tileConfs = append(tileConfs, v)
@@ -99,7 +99,7 @@ func CreateResourceManager(config *ResourceManagerConfig) (*ResourceManager, boo
 		manager.fontMap[v.Name] = font
 	}
 
-	return &manager, true
+	return &manager
 }
 
 func (rm *ResourceManager) GetTile(name string) (*allegro.Bitmap, bool) {
@@ -115,5 +115,5 @@ func (rm *ResourceManager) GetTile(name string) (*allegro.Bitmap, bool) {
 
 func (rm *ResourceManager) GetFont(name string) (*allegro.Font, bool) {
 	font, ok := rm.fontMap[name]
-	return font, font != nil
+	return font, ok && font != nil
 }
