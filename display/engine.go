@@ -34,6 +34,15 @@ type GameEngine interface {
 	RegisterDisplayEngine(*DisplayEngine)
 }
 
+func InitializeAllegro() {
+	allegro.Init()
+	allegro.InitFont()
+	allegro.InitImage()
+	allegro.InitTTF()
+	allegro.InstallKeyboard()
+	allegro.InstallMouse()
+}
+
 type DisplayEngine struct {
 	config     DisplayConfig
 	gameEngine *GameEngine
@@ -49,7 +58,7 @@ type DisplayEngine struct {
 	resourceManager *resources.ResourceManager
 }
 
-func CreateDisplayEngine(conf *allegro.Config, gameEngine *GameEngine) *DisplayEngine {
+func CreateDisplayEngine(conf *allegro.Config, gameEngine GameEngine) *DisplayEngine {
 	var displayEngine DisplayEngine
 
 	var wg sync.WaitGroup
@@ -59,7 +68,7 @@ func CreateDisplayEngine(conf *allegro.Config, gameEngine *GameEngine) *DisplayE
 		wg.Done()
 	}()
 	go func() {
-		resourceDir := config.GetString(conf, "resources", "directory", ".")
+		resourceDir := config.GetString(conf, "resources", "directory", "./resources")
 		conf, ok := resources.LoadResourceManagerConfig(resourceDir, "")
 		if !ok {
 			log.Fatalf("Could not load resource manager config")
@@ -75,9 +84,9 @@ func CreateDisplayEngine(conf *allegro.Config, gameEngine *GameEngine) *DisplayE
 	displayEngine.viewport.X = -displayEngine.viewport.W / 2
 	displayEngine.viewport.Y = -displayEngine.viewport.H / 2
 
-	displayEngine.gameEngine = gameEngine
-	displayEngine.config = (*gameEngine).GetDisplayConfig()
-	(*gameEngine).RegisterDisplayEngine(&displayEngine)
+	displayEngine.gameEngine = &gameEngine
+	displayEngine.config = (*displayEngine.gameEngine).GetDisplayConfig()
+	(*displayEngine.gameEngine).RegisterDisplayEngine(&displayEngine)
 
 	return &displayEngine
 }
@@ -117,6 +126,10 @@ func (d *DisplayEngine) MoveViewport(v Viewport) {
 	d.drawLock.Lock()
 	d.viewport = v
 	d.drawLock.Unlock()
+}
+
+func (d *DisplayEngine) GetResourceManager() *resources.ResourceManager {
+	return d.resourceManager
 }
 
 func (d *DisplayEngine) Run() {

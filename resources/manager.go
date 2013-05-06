@@ -1,7 +1,15 @@
 package resources
 
 import (
+	"log"
+	
 	"github.com/bluepeppers/allegro"
+)
+
+const (
+	DEFAULT_TILE_NAME = "____DEFAULT____"
+	DEFAULT_TILE_WIDTH = 32
+	DEFAULT_TILE_HEIGHT = 32
 )
 
 // Infomation about a tile in the atlas
@@ -20,6 +28,9 @@ type ResourceManager struct {
 }
 
 func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
+	defaultTileConfig := TileConfig{Name: DEFAULT_TILE_NAME, Filename: DEFAULT_TILE_NAME}
+	config.TileConfigs = append(config.TileConfigs, defaultTileConfig)
+	
 	tileConfs := make([]TileConfig, 0)
 	for _, v := range config.TileConfigs {
 		tileConfs = append(tileConfs, v)
@@ -30,7 +41,12 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 	totalWidth := 0
 	for i := 0; i < len(tileBmps); i++ {
 		cfg := tileConfs[i]
-		bmp := allegro.LoadBitmap(cfg.Filename)
+		var bmp *allegro.Bitmap
+		if cfg.Name == DEFAULT_TILE_NAME {
+			bmp = allegro.NewBitmap(DEFAULT_TILE_WIDTH, DEFAULT_TILE_HEIGHT)
+		} else {
+			bmp = allegro.LoadBitmap(cfg.Filename)
+		}
 		tileBmps[i] = bmp
 		var x, y, w, h int
 		x = cfg.X
@@ -111,6 +127,27 @@ func (rm *ResourceManager) GetTile(name string) (*allegro.Bitmap, bool) {
 	sub := rm.tileAtlas.CreateSubBitmap(metadata.x, metadata.y,
 		metadata.w, metadata.h)
 	return sub, sub != nil
+}
+
+// Gets a tile that can be drawn, no matter what. Won't be pretty, but won't crash.
+func (rm *ResourceManager) GetDefaultTile() *allegro.Bitmap {
+	pos, ok := rm.tilePositions[DEFAULT_TILE_NAME]
+	if !ok {
+		log.Panicf("Could not find default key in atlas: %v", DEFAULT_TILE_NAME)
+	}
+	metadata := rm.tileMetadatas[pos]
+	sub := rm.tileAtlas.CreateSubBitmap(metadata.x, metadata.y,
+		metadata.w, metadata.h)
+	return sub
+}
+
+func (rm *ResourceManager) GetTileOrDefault(name string) *allegro.Bitmap {
+	tile, ok := rm.GetTile(name)
+	if !ok {
+		log.Printf("Could not find tile named %v. Defaulting to default tile.", name)
+		return rm.GetDefaultTile()
+	}
+	return tile
 }
 
 func (rm *ResourceManager) GetFont(name string) (*allegro.Font, bool) {
