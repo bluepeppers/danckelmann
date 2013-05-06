@@ -45,7 +45,6 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 		if cfg.Name == DEFAULT_TILE_NAME {
 			bmp = allegro.NewBitmap(DEFAULT_TILE_WIDTH, DEFAULT_TILE_HEIGHT)
 		} else {
-			log.Printf("Loading bitmap %q", cfg.Filename)
 			bmp = allegro.LoadBitmap(cfg.Filename)
 		}
 		tileBmps[i] = bmp

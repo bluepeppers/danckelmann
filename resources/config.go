@@ -62,7 +62,6 @@ func LoadResourceManagerConfig(directory string, prefix string) (*ResourceManage
 			continue
 		}
 
-		log.Printf("Parsing res: %v -> %v", sectionName, resourceType)
 		switch resourceType {
 		case "tile":
 			tileConfig, ok := loadTileConfig(rawConfig, sectionName, prefix, directory)
