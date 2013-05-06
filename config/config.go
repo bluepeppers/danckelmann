@@ -1,8 +1,8 @@
 package config
 
 import (
-	"log"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/bluepeppers/allegro"

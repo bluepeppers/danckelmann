@@ -47,13 +47,14 @@ type ResourceManagerConfig struct {
 func LoadResourceManagerConfig(directory string, prefix string) (*ResourceManagerConfig, bool) {
 	configFilename := path.Join(directory, "resources.ini")
 	_, err := os.Open(configFilename)
-	if !os.IsNotExist(err) {
+	if os.IsNotExist(err) {
 		return nil, false
 	}
 
 	var rmConfig ResourceManagerConfig
 	rawConfig := allegro.LoadConfig(configFilename)
-	for sectionName := range rawConfig.IterSections() {
+	log.Printf("%v", rawConfig.GetSections())
+	for _, sectionName := range rawConfig.GetSections() {
 		resourceType, ok := rawConfig.Get(sectionName, "type")
 		if !ok {
 			log.Printf("Section %v of %v resource file has no type field",
@@ -61,6 +62,8 @@ func LoadResourceManagerConfig(directory string, prefix string) (*ResourceManage
 			log.Printf("Skipping section")
 			continue
 		}
+
+		log.Printf("Parsing res: %v -> %v", sectionName, resourceType)
 		switch resourceType {
 		case "tile":
 			tileConfig, ok := loadTileConfig(rawConfig, sectionName, prefix, directory)
@@ -77,26 +80,35 @@ func LoadResourceManagerConfig(directory string, prefix string) (*ResourceManage
 			if !ok {
 				log.Printf("Subdir %v had no filename field", sectionName)
 				log.Printf("Skipping directory")
-				break
+				continue
 			}
 			dirname := path.Join(directory, fname)
 			file, err := os.Open(dirname)
 			var stat os.FileInfo
-			if err != nil {
+			if err == nil {
 				stat, err = file.Stat()
 			}
 			if err != nil || !stat.Mode().IsDir() {
 				log.Printf("Subdir %v's filename field is not a directory: %v",
 					sectionName, dirname)
 				log.Printf("Skipping directory")
-				break
+				continue
 			}
 
-			subPrefix := prefix + "." + sectionName
+			var subPrefix string
+			if prefix != "" {
+				subPrefix = prefix + "." + sectionName
+			} else {
+				subPrefix = sectionName
+			}
 			subConfig, ok := LoadResourceManagerConfig(dirname, subPrefix)
 			if ok {
 				rmConfig.Merge(subConfig)
 			}
+		default:
+			log.Printf("Resource %q was of type %q that was not recognised",
+				sectionName, resourceType)
+			log.Printf("Skipping resource")
 		}
 	}
 
@@ -106,7 +118,11 @@ func LoadResourceManagerConfig(directory string, prefix string) (*ResourceManage
 func loadTileConfig(rawConfig *allegro.Config, name, prefix, directory string) (TileConfig, bool) {
 	var tileConf TileConfig
 
-	tileConf.Name = prefix + "." + name
+	if prefix != "" {
+		tileConf.Name = prefix + "." + name
+	} else {
+		tileConf.Name = name
+	}
 
 	fname, ok := rawConfig.Get(name, "filename")
 	if !ok {
@@ -116,7 +132,7 @@ func loadTileConfig(rawConfig *allegro.Config, name, prefix, directory string) (
 	}
 	filename := path.Join(directory, fname)
 	_, err := os.Open(filename)
-	if !os.IsNotExist(err) {
+	if os.IsNotExist(err) {
 		log.Printf("Resource %v's assigned file did not exist: %v",
 			name, filename)
 		log.Printf("Skipping resource")
@@ -162,7 +178,11 @@ func loadTileConfig(rawConfig *allegro.Config, name, prefix, directory string) (
 func loadFontConfig(rawConfig *allegro.Config, name, prefix, directory string) (FontConfig, bool) {
 	var fontConf FontConfig
 
-	fontConf.Name = prefix + "." + name
+	if prefix != "" {
+		fontConf.Name = prefix + "." + name
+	} else {
+		fontConf.Name = name
+	}
 
 	fname, ok := rawConfig.Get(name, "filename")
 	if !ok {
@@ -174,7 +194,7 @@ func loadFontConfig(rawConfig *allegro.Config, name, prefix, directory string) (
 	if fname != "builtin" {
 		filename = path.Join(directory, fname)
 		_, err := os.Open(filename)
-		if !os.IsNotExist(err) {
+		if os.IsNotExist(err) {
 			log.Printf("Resource %v's assigned file did not exist: %v",
 				name, filename)
 			log.Printf("Skipping resource")

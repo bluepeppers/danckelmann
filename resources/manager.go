@@ -2,14 +2,14 @@ package resources
 
 import (
 	"log"
-	
+
 	"github.com/bluepeppers/allegro"
 )
 
 const (
-	DEFAULT_TILE_NAME = "____DEFAULT____"
-	DEFAULT_TILE_WIDTH = 32
-	DEFAULT_TILE_HEIGHT = 32
+	DEFAULT_TILE_NAME   = "____DEFAULT____"
+	DEFAULT_TILE_WIDTH  = 128
+	DEFAULT_TILE_HEIGHT = 128
 )
 
 // Infomation about a tile in the atlas
@@ -30,7 +30,7 @@ type ResourceManager struct {
 func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 	defaultTileConfig := TileConfig{Name: DEFAULT_TILE_NAME, Filename: DEFAULT_TILE_NAME}
 	config.TileConfigs = append(config.TileConfigs, defaultTileConfig)
-	
+
 	tileConfs := make([]TileConfig, 0)
 	for _, v := range config.TileConfigs {
 		tileConfs = append(tileConfs, v)
@@ -45,12 +45,15 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 		if cfg.Name == DEFAULT_TILE_NAME {
 			bmp = allegro.NewBitmap(DEFAULT_TILE_WIDTH, DEFAULT_TILE_HEIGHT)
 		} else {
+			log.Printf("Loading bitmap %q", cfg.Filename)
 			bmp = allegro.LoadBitmap(cfg.Filename)
 		}
 		tileBmps[i] = bmp
 		var x, y, w, h int
 		x = cfg.X
 		y = cfg.Y
+		w = cfg.W
+		h = cfg.H
 		bmpw, bmph := bmp.GetDimensions()
 		if bmpw < x {
 			x = 0
@@ -67,6 +70,13 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 			h = bmph - y
 		} else {
 			h = cfg.H
+		}
+
+		if w == 0 {
+			w = bmpw - x
+		}
+		if h == 0 {
+			h = bmph - y
 		}
 
 		if h > maxHeight {

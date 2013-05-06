@@ -1,19 +1,22 @@
 package display
 
 import (
-	"sync"
 	"log"
+	"sync"
+	"time"
 
 	"github.com/bluepeppers/allegro"
 
-	"github.com/bluepeppers/danckelmann/resources"
 	"github.com/bluepeppers/danckelmann/config"
+	"github.com/bluepeppers/danckelmann/resources"
 )
 
 const (
 	// Default dimensions of the display. Often not used
-	DEFAULT_WIDTH = 600
+	DEFAULT_WIDTH  = 600
 	DEFAULT_HEIGHT = 400
+
+	SCROLL_SPEED = 10
 )
 
 // The interface that a game engine must implement for the display engine to
@@ -32,6 +35,8 @@ type GameEngine interface {
 	// allows the GameEngine to inform the DisplayEngine of changes of state
 	// without the DisplayEngine having to explicitly poll for them.
 	RegisterDisplayEngine(*DisplayEngine)
+
+	GameFinished()
 }
 
 func InitializeAllegro() {
@@ -51,6 +56,7 @@ type DisplayEngine struct {
 	running    bool
 
 	drawLock     sync.RWMutex
+	frameDrawing sync.RWMutex // Locked -> Frame drawing atm
 	currentFrame int
 	viewport     Viewport
 	display      *allegro.Display
@@ -58,7 +64,7 @@ type DisplayEngine struct {
 	resourceManager *resources.ResourceManager
 }
 
-func CreateDisplayEngine(conf *allegro.Config, gameEngine GameEngine) *DisplayEngine {
+func CreateDisplayEngine(resourceDir string, conf *allegro.Config, gameEngine GameEngine) *DisplayEngine {
 	var displayEngine DisplayEngine
 
 	var wg sync.WaitGroup
@@ -68,10 +74,9 @@ func CreateDisplayEngine(conf *allegro.Config, gameEngine GameEngine) *DisplayEn
 		wg.Done()
 	}()
 	go func() {
-		resourceDir := config.GetString(conf, "resources", "directory", "./resources")
 		conf, ok := resources.LoadResourceManagerConfig(resourceDir, "")
 		if !ok {
-			log.Fatalf("Could not load resource manager config")
+			log.Fatalf("Could not load resource manager config from %q", resourceDir)
 		}
 		displayEngine.resourceManager = resources.CreateResourceManager(conf)
 		wg.Done()
@@ -137,25 +142,26 @@ func (d *DisplayEngine) Run() {
 	d.statusLock.Lock()
 	d.running = true
 	d.statusLock.Unlock()
-	lastFrame := 1
-	d.drawLock.Lock()
-	d.currentFrame = lastFrame
-	d.drawLock.Unlock()
+
+	go d.eventHandler()
+
+	start := time.Now()
+	frames := 0
 	for running {
-		d.drawLock.RLock()
-		if d.currentFrame != lastFrame {
-			lastFrame = d.currentFrame
-			go d.drawFrame(lastFrame)
-		}
-		d.drawLock.RUnlock()
+		d.frameDrawing.Lock()
+		go d.drawFrame()
+		frames++
 
 		d.statusLock.RLock()
 		running = d.running
 		d.statusLock.RUnlock()
+		fps := float64(frames) / time.Since(start).Seconds()
+		log.Printf("FPS: %v", fps)
 	}
+
 }
 
-func (d *DisplayEngine) drawFrame(currFrame int) {
+func (d *DisplayEngine) drawFrame() {
 	toDraw := make([][]*allegro.Bitmap, d.config.MapW*d.config.MapH)
 	drawPasses := 0
 	for x := 0; x < d.config.MapW; x++ {
@@ -173,26 +179,31 @@ func (d *DisplayEngine) drawFrame(currFrame int) {
 	viewport := d.viewport
 	d.drawLock.RUnlock()
 	d.display.SetTargetBackbuffer()
+	d.config.BGColor.Clear()
+
 	for p := 0; p < drawPasses; p++ {
-		for s := 0; s < d.config.MapW+d.config.MapH; s++ {
-			start := 0
-			if s > d.config.MapW {
-				start = s - d.config.MapW
-			}
-			for x := start; x < s; x++ {
+		m := d.config.MapW
+		n := d.config.MapH
+		for s := 0; s < m+n; s++ {
+			for x := 0; x < s; x++ {
 				y := s - x
+
+				if x >= m || y < 0 || y >= m {
+					continue
+				}
+
+				if len(toDraw[x*d.config.MapW+y]) < p {
+					continue
+				}
+
 				// Trust me, I study maths
 				// Coordinates in terms of pixels
-				px := (y/2 - x/2) * d.config.TileW
-				py := (x/2 - y/2) * d.config.TileH
+				px := (y - x) * d.config.TileW / 2
+				py := (x + y) * d.config.TileH / 2
 				bmp := toDraw[x*d.config.MapW+y][p]
 				// Coordinates in terms of pixels on screen
 				sx := px - viewport.X
 				sy := py - viewport.Y
-				if sx < -d.config.TileW || sx > viewport.W ||
-					sy < d.config.TileH || sy > viewport.H {
-					continue
-				}
 				bmp.Draw(float32(sx), float32(sy), 0)
 			}
 		}
@@ -200,9 +211,50 @@ func (d *DisplayEngine) drawFrame(currFrame int) {
 		viewport = d.viewport
 		d.drawLock.RUnlock()
 	}
+
 	allegro.Flip()
 
-	d.drawLock.Lock()
-	d.currentFrame = currFrame
-	d.drawLock.Unlock()
+	d.frameDrawing.Unlock()
+}
+
+func (d *DisplayEngine) eventHandler() {
+	es := []*allegro.EventSource{d.display.GetEventSource(),
+		allegro.GetKeyboardEventSource()}
+	queue := allegro.GetEvents(es)
+	stopped := false
+	for !stopped {
+		ev := <-queue
+		switch tev := ev.(type) {
+		case allegro.DisplayCloseEvent:
+			d.statusLock.Lock()
+			d.running = false
+			d.statusLock.Unlock()
+		case allegro.DisplayResizeEvent:
+			d.drawLock.Lock()
+			d.viewport.W = tev.W
+			d.viewport.H = tev.H
+			log.Printf("Acknowledging resize to %v, %v", tev.W, tev.H)
+			d.display.AcknowledgeResize()
+			d.drawLock.Unlock()
+		case allegro.KeyCharEvent:
+			var x, y int
+			switch tev.Keycode {
+			case allegro.KEY_LEFT:
+				x = -SCROLL_SPEED
+			case allegro.KEY_RIGHT:
+				x = SCROLL_SPEED
+			case allegro.KEY_UP:
+				y = -SCROLL_SPEED
+			case allegro.KEY_DOWN:
+				y = SCROLL_SPEED
+			}
+			d.drawLock.Lock()
+			d.viewport.X += x
+			d.viewport.Y += y
+			d.drawLock.Unlock()
+		}
+		d.statusLock.RLock()
+		stopped = !d.running
+		d.statusLock.RUnlock()
+	}
 }
