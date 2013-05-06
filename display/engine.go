@@ -36,6 +36,8 @@ type GameEngine interface {
 	// without the DisplayEngine having to explicitly poll for them.
 	RegisterDisplayEngine(*DisplayEngine)
 
+	// Called when the display receivs a DisplayCloseEvent or the game is
+	// otherwise terminated
 	GameFinished()
 }
 
@@ -143,7 +145,7 @@ func (d *DisplayEngine) Run() {
 	d.running = true
 	d.statusLock.Unlock()
 
-	go displayEngine.eventHandler()
+	go d.eventHandler()
 
 	start := time.Now()
 	frames := 0
@@ -218,46 +220,4 @@ func (d *DisplayEngine) drawFrame() {
 	allegro.Flip()
 
 	d.frameDrawing.Unlock()
-}
-
-func (d *DisplayEngine) eventHandler() {
-	es := []*allegro.EventSource{d.display.GetEventSource(),
-		allegro.GetKeyboardEventSource()}
-	queue := allegro.GetEvents(es)
-	stopped := false
-	for !stopped {
-		ev := <-queue
-		switch tev := ev.(type) {
-		case allegro.DisplayCloseEvent:
-			d.statusLock.Lock()
-			d.running = false
-			d.statusLock.Unlock()
-		case allegro.DisplayResizeEvent:
-			d.drawLock.Lock()
-			d.viewport.W = tev.W
-			d.viewport.H = tev.H
-			log.Printf("Acknowledging resize to %v, %v", tev.W, tev.H)
-			d.display.AcknowledgeResize()
-			d.drawLock.Unlock()
-		case allegro.KeyCharEvent:
-			var x, y int
-			switch tev.Keycode {
-			case allegro.KEY_LEFT:
-				x = -SCROLL_SPEED
-			case allegro.KEY_RIGHT:
-				x = SCROLL_SPEED
-			case allegro.KEY_UP:
-				y = -SCROLL_SPEED
-			case allegro.KEY_DOWN:
-				y = SCROLL_SPEED
-			}
-			d.drawLock.Lock()
-			d.viewport.X += x
-			d.viewport.Y += y
-			d.drawLock.Unlock()
-		}
-		d.statusLock.RLock()
-		stopped = !d.running
-		d.statusLock.RUnlock()
-	}
 }
