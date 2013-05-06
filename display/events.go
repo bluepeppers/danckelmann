@@ -6,7 +6,6 @@ import (
 	"github.com/bluepeppers/allegro"
 )
 
-
 func (d *DisplayEngine) eventHandler() {
 	es := []*allegro.EventSource{d.display.GetEventSource(),
 		allegro.GetKeyboardEventSource(),
@@ -48,7 +47,7 @@ func (d *DisplayEngine) handleKeyChar(ev allegro.KeyCharEvent) {
 	d.drawLock.Lock()
 	d.viewport.X += x
 	d.viewport.Y += y
-	d.drawLock.Unlock()	
+	d.drawLock.Unlock()
 }
 
 func (d *DisplayEngine) handleResize(ev allegro.DisplayResizeEvent) {
@@ -67,8 +66,8 @@ func (d *DisplayEngine) handleMouseDown(event allegro.MouseButtonDown) {
 }
 
 func (d *DisplayEngine) startScrolling(start allegro.MouseButtonDown) {
-	timer := allegro.CreateTimer(float64(1)/20)
-		es := []*allegro.EventSource{allegro.GetMouseEventSource(),
+	timer := allegro.CreateTimer(float64(1) / 20)
+	es := []*allegro.EventSource{allegro.GetMouseEventSource(),
 		timer.GetEventSource()}
 	timer.Start()
 	defer timer.Destroy()
@@ -83,8 +82,8 @@ func (d *DisplayEngine) startScrolling(start allegro.MouseButtonDown) {
 			}
 		case allegro.TimerEvent:
 			d.drawLock.Lock()
-			d.viewport.X += (x - start.X)/20
-			d.viewport.Y += (y - start.Y)/20
+			d.viewport.X += (x - start.X) / 20
+			d.viewport.Y += (y - start.Y) / 20
 			d.drawLock.Unlock()
 		case allegro.MouseAxesEvent:
 			x, y = tev.X, tev.Y

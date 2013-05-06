@@ -160,7 +160,6 @@ func (d *DisplayEngine) Run() {
 		fps := float64(frames) / time.Since(start).Seconds()
 		_ = fps
 	}
-
 }
 
 func (d *DisplayEngine) drawFrame() {
@@ -181,6 +180,7 @@ func (d *DisplayEngine) drawFrame() {
 	d.viewport.W, d.viewport.H = d.display.GetDimensions()
 	viewport := d.viewport
 	d.drawLock.RUnlock()
+
 	d.display.SetTargetBackbuffer()
 	d.config.BGColor.Clear()
 
@@ -197,19 +197,15 @@ func (d *DisplayEngine) drawFrame() {
 				if x >= m || y < 0 || y >= n {
 					continue
 				}
-
 				if len(toDraw[x*d.config.MapW+y]) < p {
 					continue
 				}
 
 				// Trust me, I study maths
 				// Coordinates in terms of pixels
-				px := (y - x) * d.config.TileW / 2 - d.config.TileW/2
-				py := (x + y) * d.config.TileH / 2 - d.config.TileH/2
+				px := (y-x)*d.config.TileW/2 - d.config.TileW/2
+				py := (x+y)*d.config.TileH/2 - d.config.TileH/2
 				bmp := toDraw[x*d.config.MapW+y][p]
-/*				// Coordinates in terms of pixels on screen
-				sx := px - viewport.X
-				sy := py - viewport.Y*/
 				bmp.Draw(float32(px), float32(py), 0)
 			}
 		}
