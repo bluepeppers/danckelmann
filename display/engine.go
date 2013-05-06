@@ -184,6 +184,8 @@ func (d *DisplayEngine) drawFrame() {
 	d.display.SetTargetBackbuffer()
 	d.config.BGColor.Clear()
 
+	viewport.GetTransform(d.display).Use()
+
 	allegro.HoldBitmapDrawing(true)
 	for p := 0; p < drawPasses; p++ {
 		m := d.config.MapW
@@ -202,13 +204,13 @@ func (d *DisplayEngine) drawFrame() {
 
 				// Trust me, I study maths
 				// Coordinates in terms of pixels
-				px := (y - x) * d.config.TileW / 2
-				py := (x + y) * d.config.TileH / 2
+				px := (y - x) * d.config.TileW / 2 - d.config.TileW/2
+				py := (x + y) * d.config.TileH / 2 - d.config.TileH/2
 				bmp := toDraw[x*d.config.MapW+y][p]
-				// Coordinates in terms of pixels on screen
+/*				// Coordinates in terms of pixels on screen
 				sx := px - viewport.X
-				sy := py - viewport.Y
-				bmp.Draw(float32(sx), float32(sy), 0)
+				sy := py - viewport.Y*/
+				bmp.Draw(float32(px), float32(py), 0)
 			}
 		}
 		d.drawLock.RLock()
