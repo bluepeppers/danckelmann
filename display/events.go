@@ -60,13 +60,13 @@ func (d *DisplayEngine) handleResize(ev allegro.DisplayResizeEvent) {
 }
 
 func (d *DisplayEngine) handleMouseDown(event allegro.MouseButtonDown) {
-	if event.Button == 1 {
+	if event.Button == 3 {
 		go d.startScrolling(event)
 	}
 }
 
 func (d *DisplayEngine) startScrolling(start allegro.MouseButtonDown) {
-	timer := allegro.CreateTimer(float64(1) / 20)
+	timer := allegro.CreateTimer(float64(1) / 30)
 	es := []*allegro.EventSource{allegro.GetMouseEventSource(),
 		timer.GetEventSource()}
 	timer.Start()
@@ -82,8 +82,8 @@ func (d *DisplayEngine) startScrolling(start allegro.MouseButtonDown) {
 			}
 		case allegro.TimerEvent:
 			d.drawLock.Lock()
-			d.viewport.X += (x - start.X) / 20
-			d.viewport.Y += (y - start.Y) / 20
+			d.viewport.X += (x - start.X) / 30
+			d.viewport.Y += (y - start.Y) / 30
 			d.drawLock.Unlock()
 		case allegro.MouseAxesEvent:
 			x, y = tev.X, tev.Y
