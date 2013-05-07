@@ -102,6 +102,7 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 		metadata.x = currentPos
 		metadata.y = 0
 		currentPos += metadata.w
+		tileMetadatas[i] = metadata
 	}
 
 	allegro.HoldBitmapDrawing(false)
