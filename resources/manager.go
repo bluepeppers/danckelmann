@@ -23,6 +23,7 @@ type ResourceManager struct {
 	tileAtlas     *allegro.Bitmap
 	tileMetadatas []tileMetadata
 	tilePositions map[string]int
+	tileSubs      map[string]*allegro.Bitmap
 
 	fontMap map[string]*allegro.Font
 }
@@ -109,8 +110,11 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 	manager.tileAtlas = atlas
 	manager.tileMetadatas = tileMetadatas
 	manager.tilePositions = make(map[string]int, len(tileMetadatas))
+	manager.tileSubs = make(map[string]*allegro.Bitmap, len(tileMetadatas))
 	for _, v := range tileMetadatas {
 		manager.tilePositions[v.name] = v.index
+		subBmp := manager.tileAtlas.CreateSubBitmap(v.x, v.y, v.w, v.h)
+		manager.tileSubs[v.name] = subBmp
 	}
 
 	manager.fontMap = make(map[string]*allegro.Font)
@@ -128,25 +132,26 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 }
 
 func (rm *ResourceManager) GetTile(name string) (*allegro.Bitmap, bool) {
+	sub, ok := rm.tileSubs[name]
+	if ok {
+		return sub, sub != nil
+	}
 	pos, ok := rm.tilePositions[name]
 	if !ok {
 		return nil, false
 	}
 	metadata := rm.tileMetadatas[pos]
-	sub := rm.tileAtlas.CreateSubBitmap(metadata.x, metadata.y,
+	sub = rm.tileAtlas.CreateSubBitmap(metadata.x, metadata.y,
 		metadata.w, metadata.h)
 	return sub, sub != nil
 }
 
 // Gets a tile that can be drawn, no matter what. Won't be pretty, but won't crash.
 func (rm *ResourceManager) GetDefaultTile() *allegro.Bitmap {
-	pos, ok := rm.tilePositions[DEFAULT_TILE_NAME]
+	sub, ok := rm.GetTile(DEFAULT_TILE_NAME)
 	if !ok {
 		log.Panicf("Could not find default key in atlas: %v", DEFAULT_TILE_NAME)
 	}
-	metadata := rm.tileMetadatas[pos]
-	sub := rm.tileAtlas.CreateSubBitmap(metadata.x, metadata.y,
-		metadata.w, metadata.h)
 	return sub
 }
 

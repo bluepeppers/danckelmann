@@ -153,12 +153,16 @@ func (d *DisplayEngine) Run() {
 		d.frameDrawing.Lock()
 		go d.drawFrame()
 		frames++
+		if frames >= 30 {
+			fps := float64(frames) / time.Since(start).Seconds()
+			log.Printf("FPS: %v", fps)
+			start = time.Now()
+			frames = 0
+		}
 
 		d.statusLock.RLock()
 		running = d.running
 		d.statusLock.RUnlock()
-		fps := float64(frames) / time.Since(start).Seconds()
-		_ = fps
 	}
 }
 
@@ -206,7 +210,10 @@ func (d *DisplayEngine) drawFrame() {
 				px := (y-x)*d.config.TileW/2 - d.config.TileW/2
 				py := (x+y)*d.config.TileH/2 - d.config.TileH/2
 				bmp := toDraw[x*d.config.MapW+y][p]
-				bmp.Draw(float32(px), float32(py), 0)
+				bw, bh := bmp.GetDimensions()
+				if viewport.OnScreen(px, py, bw, bh) {
+					bmp.Draw(float32(px), float32(py), 0)
+				}
 			}
 		}
 		d.drawLock.RLock()

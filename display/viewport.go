@@ -15,3 +15,15 @@ func (v *Viewport) GetTransform(d *allegro.Display) *allegro.Transform {
 		float32(v.W)/float32(width), float32(v.H)/float32(height), 0)
 	return &final
 }
+
+func (v *Viewport) OnScreen(x, y, w, h int) bool {
+	return !(
+		// Off left side
+		x + w < v.X  || 
+		// Off right side
+		x > v.X + v.W ||
+		// Off top
+		y + h < v.Y ||
+		// Off bottom
+		y > v.Y + v.H)
+}
