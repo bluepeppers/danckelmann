@@ -15,8 +15,6 @@ const (
 	// Default dimensions of the display. Often not used
 	DEFAULT_WIDTH  = 600
 	DEFAULT_HEIGHT = 400
-
-	SCROLL_SPEED = 10
 )
 
 // The interface that a game engine must implement for the display engine to
@@ -61,7 +59,7 @@ type DisplayEngine struct {
 	frameDrawing sync.RWMutex // Locked -> Frame drawing atm
 	currentFrame int
 	viewport     Viewport
-	display      *allegro.Display
+	Display      *allegro.Display
 
 	resourceManager *resources.ResourceManager
 }
@@ -72,7 +70,7 @@ func CreateDisplayEngine(resourceDir string, conf *allegro.Config, gameEngine Ga
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
-		displayEngine.display = createDisp(conf)
+		displayEngine.Display = createDisp(conf)
 		wg.Done()
 	}()
 	go func() {
@@ -87,7 +85,7 @@ func CreateDisplayEngine(resourceDir string, conf *allegro.Config, gameEngine Ga
 
 	displayEngine.running = false
 
-	displayEngine.viewport.W, displayEngine.viewport.H = displayEngine.display.GetDimensions()
+	displayEngine.viewport.W, displayEngine.viewport.H = displayEngine.Display.GetDimensions()
 	displayEngine.viewport.X = -displayEngine.viewport.W / 2
 	displayEngine.viewport.Y = -displayEngine.viewport.H / 2
 
@@ -129,7 +127,13 @@ func (d *DisplayEngine) Stop() {
 	d.statusLock.Unlock()
 }
 
-func (d *DisplayEngine) MoveViewport(v Viewport) {
+func (d *DisplayEngine) GetViewport() Viewport {
+	d.drawLock.RLock()
+	defer d.drawLock.RUnlock()
+	return d.viewport
+}
+
+func (d *DisplayEngine) SetViewport(v Viewport) {
 	d.drawLock.Lock()
 	d.viewport = v
 	d.drawLock.Unlock()
@@ -181,14 +185,14 @@ func (d *DisplayEngine) drawFrame() {
 
 	// Don't want anyone changing the viewport mid frame or any such highjinks
 	d.drawLock.RLock()
-	d.viewport.W, d.viewport.H = d.display.GetDimensions()
+	d.viewport.W, d.viewport.H = d.Display.GetDimensions()
 	viewport := d.viewport
 	d.drawLock.RUnlock()
 
-	d.display.SetTargetBackbuffer()
+	d.Display.SetTargetBackbuffer()
 	d.config.BGColor.Clear()
 
-	viewport.GetTransform(d.display).Use()
+	viewport.GetTransform(d.Display).Use()
 
 	allegro.HoldBitmapDrawing(true)
 	for p := 0; p < drawPasses; p++ {
