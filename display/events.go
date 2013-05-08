@@ -67,7 +67,9 @@ func (d *DisplayEngine) handleMouseDown(event allegro.MouseButtonDown) {
 
 func (d *DisplayEngine) startScrolling(start allegro.MouseButtonDown) {
 	timer := allegro.CreateTimer(float64(1) / 30)
-	es := []*allegro.EventSource{allegro.GetMouseEventSource(),
+	mouseEvent := allegro.GetMouseEventSource()
+	defer mouseEvent.StopGetEvents()
+	es := []*allegro.EventSource{mouseEvent,
 		timer.GetEventSource()}
 	timer.Start()
 	defer timer.Destroy()
