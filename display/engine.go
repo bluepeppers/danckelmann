@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync"
 	"time"
+	"fmt"
 
 	"github.com/bluepeppers/allegro"
 
@@ -60,6 +61,7 @@ type DisplayEngine struct {
 	currentFrame int
 	viewport     Viewport
 	Display      *allegro.Display
+	fps          float64
 
 	resourceManager *resources.ResourceManager
 }
@@ -85,9 +87,8 @@ func CreateDisplayEngine(resourceDir string, conf *allegro.Config, gameEngine Ga
 
 	displayEngine.running = false
 
-	displayEngine.viewport.W, displayEngine.viewport.H = displayEngine.Display.GetDimensions()
-	displayEngine.viewport.X = -displayEngine.viewport.W / 2
-	displayEngine.viewport.Y = -displayEngine.viewport.H / 2
+	w, h := displayEngine.Display.GetDimensions()
+	displayEngine.viewport = CreateViewport(-w/2, -h/w, w, h, 1.0, 1.0)
 
 	displayEngine.gameEngine = &gameEngine
 	displayEngine.config = (*displayEngine.gameEngine).GetDisplayConfig()
@@ -127,15 +128,15 @@ func (d *DisplayEngine) Stop() {
 	d.statusLock.Unlock()
 }
 
-func (d *DisplayEngine) GetViewport() Viewport {
+func (d *DisplayEngine) GetViewport() *Viewport {
 	d.drawLock.RLock()
 	defer d.drawLock.RUnlock()
-	return d.viewport
+	return &d.viewport
 }
 
-func (d *DisplayEngine) SetViewport(v Viewport) {
+func (d *DisplayEngine) SetViewport(v *Viewport) {
 	d.drawLock.Lock()
-	d.viewport = v
+	d.viewport = *v
 	d.drawLock.Unlock()
 }
 
@@ -158,8 +159,7 @@ func (d *DisplayEngine) Run() {
 		go d.drawFrame()
 		frames++
 		if frames >= 30 {
-			fps := float64(frames) / time.Since(start).Seconds()
-			log.Printf("FPS: %v", fps)
+			d.fps = float64(frames) / time.Since(start).Seconds()
 			start = time.Now()
 			frames = 0
 		}
@@ -182,17 +182,20 @@ func (d *DisplayEngine) drawFrame() {
 			}
 		}
 	}
+	
+	font := allegro.CreateBuiltinFont()
 
 	// Don't want anyone changing the viewport mid frame or any such highjinks
 	d.drawLock.RLock()
-	d.viewport.W, d.viewport.H = d.Display.GetDimensions()
+	w, h := d.Display.GetDimensions()
+	d.viewport.ResizeViewport(w, h)
 	viewport := d.viewport
 	d.drawLock.RUnlock()
 
 	d.Display.SetTargetBackbuffer()
 	d.config.BGColor.Clear()
 
-	viewport.GetTransform(d.Display).Use()
+	viewport.GetTransform().Use()
 
 	allegro.HoldBitmapDrawing(true)
 	for p := 0; p < drawPasses; p++ {
@@ -211,8 +214,8 @@ func (d *DisplayEngine) drawFrame() {
 
 				// Trust me, I study maths
 				// Coordinates in terms of pixels
-				px := (y-x)*d.config.TileW/2 - d.config.TileW/2
-				py := (x+y)*d.config.TileH/2 - d.config.TileH/2
+				px := (y-x)*d.config.TileW/2
+				py := (x+y)*d.config.TileH/2
 				bmp := toDraw[x*d.config.MapW+y][p]
 				bw, bh := bmp.GetDimensions()
 				if viewport.OnScreen(px, py, bw, bh) {
@@ -224,8 +227,14 @@ func (d *DisplayEngine) drawFrame() {
 		viewport = d.viewport
 		d.drawLock.RUnlock()
 	}
-
 	allegro.HoldBitmapDrawing(false)
+
+	var trans allegro.Transform
+	trans.Identity()
+	trans.Use()
+
+	font.Draw(allegro.CreateColor(0, 255, 0, 255), 0, 0, 0, fmt.Sprint(int(d.fps)))
+	
 	allegro.Flip()
 
 	d.frameDrawing.Unlock()
