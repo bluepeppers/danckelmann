@@ -1,7 +1,7 @@
 package display
 
 import (
-	"log"
+//	"log"
 	"math"
 	
 	"github.com/bluepeppers/allegro"
@@ -65,19 +65,17 @@ func (v *Viewport) TileCoordinatesToScreen(tx, ty float64, config DisplayConfig)
 }
 
 func (v *Viewport) ScreenCoordinatesToTile(sx, sy int, config DisplayConfig) (float64, float64) {
+	w, h := float64(config.TileW), float64(config.TileH)
 	fx, fy := float32(sx), float32(sy)
 	var trans allegro.Transform
 	trans.Identity()
 	trans.Build(float32(-v.x), float32(-v.y), float32(v.xZoom), float32(v.yZoom),
 		0)
 	trans.Invert()
-	trans.Scale(1/float32(config.TileW), 1/float32(config.TileH))
-//	trans.Translate(1/2, 1/2)
-	trans.Scale(-1, 1)
-	trans.Rotate(-1 * math.Pi/4)
+	trans.Translate(-float32(w/2), -float32(h/2))
 
 	x, y := trans.Apply(fx, fy)
-	log.Printf("%v, %v", x, y)
-	return float64(x), float64(y)
-	//return float64(y-x) / (2 * float64(config.TileW)), float64(x+y) / (2 * float64(config.TileW))
+	tx := float64(float64(y) * w - float64(x) * h) / (w * h)
+	ty := float64(float64(y) * w + float64(x) * h) / (w * h)
+	return tx, ty
 }

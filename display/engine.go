@@ -62,6 +62,7 @@ type DisplayEngine struct {
 	viewport     Viewport
 	Display      *allegro.Display
 	fps          float64
+	cursorX, cursorY float64    
 
 	resourceManager *resources.ResourceManager
 }
