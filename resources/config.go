@@ -20,6 +20,7 @@ var (
 	positionRegexp   = regexp.MustCompile(`\d+,\d+`)
 	dimensionsRegexp = regexp.MustCompile(`\d+,\d+`)
 	sizeRegexp       = regexp.MustCompile(`\d+`)
+	offsetRegexp     = regexp.MustCompile(`\d+,\d+`)
 )
 
 // Information on how to load a tile resouce.
@@ -29,6 +30,7 @@ type TileConfig struct {
 
 	// Set any of these to 0 to use the default values
 	X, Y, W, H int
+	OffX, OffY int
 }
 
 // Information on how to load a font resource.
@@ -169,6 +171,21 @@ func loadTileConfig(rawConfig *allegro.Config, name, prefix, directory string) (
 	h, _ := strconv.Atoi(split[1])
 	tileConf.W = w
 	tileConf.H = h
+	
+	offset, ok := rawConfig.Get(name, "offset")
+	if !ok {
+		offset = "0,0"
+	} else if !offsetRegexp.MatchString(dimensions) {
+		log.Printf("Resource %v's offset filed was not valid: %v",
+			name, offset)
+		log.Printf("Using default of 0,0")
+		offset = "0,0"
+	}
+	split = strings.Split(offset, ",")
+	ox, _ := strconv.Atoi(split[0])
+	oy, _ := strconv.Atoi(split[1])
+	tileConf.OffX = ox
+	tileConf.OffY = oy
 
 	return tileConf, true
 }

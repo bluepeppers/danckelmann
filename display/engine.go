@@ -28,7 +28,7 @@ type GameEngine interface {
 	// For best results, make sure that the bitmaps all share a common
 	// parent. This is done automatically if they are loaded via a
 	// resouces.ResourceManager
-	GetTile(int, int) []*allegro.Bitmap
+	GetTile(int, int) []*resources.Bitmap
 
 	// Passes a fully initialized DisplayEngine to the GameEngine. This
 	// allows the GameEngine to inform the DisplayEngine of changes of state
@@ -172,7 +172,7 @@ func (d *DisplayEngine) Run() {
 }
 
 func (d *DisplayEngine) drawFrame() {
-	toDraw := make([][]*allegro.Bitmap, d.config.MapW*d.config.MapH)
+	toDraw := make([][]*resources.Bitmap, d.config.MapW*d.config.MapH)
 	drawPasses := 0
 	for x := 0; x < d.config.MapW; x++ {
 		for y := 0; y < d.config.MapH; y++ {
@@ -218,9 +218,11 @@ func (d *DisplayEngine) drawFrame() {
 				px := (y-x)*d.config.TileW/2
 				py := (x+y)*d.config.TileH/2
 				bmp := toDraw[x*d.config.MapW+y][p]
-				bw, bh := bmp.GetDimensions()
+				ox := bmp.OffX
+				oy := bmp.OffY
+				bw, bh := bmp.Raw.GetDimensions()
 				if viewport.OnScreen(px, py, bw, bh) {
-					bmp.Draw(float32(px), float32(py), 0)
+					bmp.Raw.Draw(float32(px - ox), float32(py - oy), 0)
 				}
 			}
 		}

@@ -12,10 +12,18 @@ const (
 	DEFAULT_TILE_HEIGHT = 128
 )
 
+// Our custom super special bitmap class
+type Bitmap struct {
+	Raw *allegro.Bitmap
+	// The offset of the bitmap when drawing
+	OffX, OffY int
+}
+
 // Infomation about a tile in the atlas
 type tileMetadata struct {
 	index      int
 	x, y, w, h int
+	offx, offy int
 	name       string
 }
 
@@ -42,6 +50,8 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 	totalWidth := 0
 	for i := 0; i < len(tileBmps); i++ {
 		cfg := tileConfs[i]
+
+		// Load the bitmap
 		var bmp *allegro.Bitmap
 		if cfg.Name == DEFAULT_TILE_NAME {
 			bmp = allegro.NewBitmap(DEFAULT_TILE_WIDTH, DEFAULT_TILE_HEIGHT)
@@ -49,11 +59,14 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 			bmp = allegro.LoadBitmap(cfg.Filename)
 		}
 		tileBmps[i] = bmp
-		var x, y, w, h int
-		x = cfg.X
-		y = cfg.Y
-		w = cfg.W
-		h = cfg.H
+
+		// Load the metadata, and then sanitize it
+		x := cfg.X
+		y := cfg.Y
+		w := cfg.W
+		h := cfg.H
+		ox := cfg.OffX
+		oy := cfg.OffY
 		bmpw, bmph := bmp.GetDimensions()
 		if bmpw < x {
 			x = 0
@@ -79,16 +92,23 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 			h = bmph - y
 		}
 
+		if ox > w {
+			ox = 0
+		}
+		if oy > h {
+			oy = 0
+		}
+
 		if h > maxHeight {
 			maxHeight = h
 		}
 		totalWidth += w
 
-		tileMetadatas[i] = tileMetadata{i, x, y, w, h, cfg.Name}
+		tileMetadatas[i] = tileMetadata{i, x, y, w, h, ox, oy, cfg.Name}
 	}
 
+	// Draw the bitmaps to the atlas
 	atlas := allegro.NewBitmap(totalWidth, maxHeight)
-
 	atlas.SetTargetBitmap()
 	allegro.HoldBitmapDrawing(true)
 
@@ -99,6 +119,8 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 		bmp.DrawRegion(float32(metadata.x), float32(metadata.y),
 			float32(metadata.w), float32(metadata.h),
 			float32(currentPos), float32(0), 0)
+		
+		// Update the metadata to the position in the atlas, from the position in the bmp
 		metadata.x = currentPos
 		metadata.y = 0
 		currentPos += metadata.w
@@ -112,12 +134,14 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 	manager.tileMetadatas = tileMetadatas
 	manager.tilePositions = make(map[string]int, len(tileMetadatas))
 	manager.tileSubs = make(map[string]*allegro.Bitmap, len(tileMetadatas))
+	// Populate the bmp cache
 	for _, v := range tileMetadatas {
 		manager.tilePositions[v.name] = v.index
 		subBmp := manager.tileAtlas.CreateSubBitmap(v.x, v.y, v.w, v.h)
 		manager.tileSubs[v.name] = subBmp
 	}
 
+	// Load the fonts
 	manager.fontMap = make(map[string]*allegro.Font)
 	for _, v := range config.FontConfigs {
 		var font *allegro.Font
@@ -132,23 +156,27 @@ func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
 	return &manager
 }
 
-func (rm *ResourceManager) GetTile(name string) (*allegro.Bitmap, bool) {
-	sub, ok := rm.tileSubs[name]
-	if ok {
-		return sub, sub != nil
-	}
+func (rm *ResourceManager) GetTile(name string) (*Bitmap, bool) {
 	pos, ok := rm.tilePositions[name]
 	if !ok {
 		return nil, false
 	}
 	metadata := rm.tileMetadatas[pos]
-	sub = rm.tileAtlas.CreateSubBitmap(metadata.x, metadata.y,
-		metadata.w, metadata.h)
-	return sub, sub != nil
+	sub, ok := rm.tileSubs[name]
+	if !ok {
+		sub = rm.tileAtlas.CreateSubBitmap(metadata.x, metadata.y,
+			metadata.w, metadata.h)
+	}
+	if sub == nil {
+		return nil, false
+	}
+	bmp := &Bitmap{sub, metadata.offx, metadata.offy}
+	
+	return bmp, true
 }
 
 // Gets a tile that can be drawn, no matter what. Won't be pretty, but won't crash.
-func (rm *ResourceManager) GetDefaultTile() *allegro.Bitmap {
+func (rm *ResourceManager) GetDefaultTile() *Bitmap {
 	sub, ok := rm.GetTile(DEFAULT_TILE_NAME)
 	if !ok {
 		log.Panicf("Could not find default key in atlas: %v", DEFAULT_TILE_NAME)
@@ -156,7 +184,7 @@ func (rm *ResourceManager) GetDefaultTile() *allegro.Bitmap {
 	return sub
 }
 
-func (rm *ResourceManager) GetTileOrDefault(name string) *allegro.Bitmap {
+func (rm *ResourceManager) GetTileOrDefault(name string) *Bitmap {
 	tile, ok := rm.GetTile(name)
 	if !ok {
 		log.Printf("Could not find tile named %v. Defaulting to default tile.", name)
