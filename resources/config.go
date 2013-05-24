@@ -83,11 +83,8 @@ func LoadResourceManagerConfig(directory string, prefix string) (*ResourceManage
 				continue
 			}
 			dirname := path.Join(directory, fname)
-			file, err := os.Open(dirname)
-			var stat os.FileInfo
-			if err == nil {
-				stat, err = file.Stat()
-			}
+			stat, err := os.Stat(dirname)
+
 			if err != nil || !stat.Mode().IsDir() {
 				log.Printf("Subdir %v's filename field is not a directory: %v",
 					sectionName, dirname)

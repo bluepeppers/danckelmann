@@ -5,6 +5,7 @@ import (
 	"math"
 	
 	"github.com/bluepeppers/allegro"
+	"github.com/go-gl/gl"
 )
 
 var ISOMETRIC_ROTATION = float32(3 * math.Pi / 8)
@@ -28,6 +29,9 @@ func (v *Viewport) ResizeViewport(w, h int) {
 	v.w = w
 	v.h = h
 	v.buildTrans()
+	allegro.RunInThread(func() {
+		gl.Viewport(0, 0, w, h)
+	})
 }
 
 func (v *Viewport) Move(dx, dy int) {
@@ -37,6 +41,13 @@ func (v *Viewport) Move(dx, dy int) {
 
 func (v *Viewport) GetTransform() *allegro.Transform {
 	return &v.trans
+}
+
+func (v *Viewport) SetupTransform() {
+	gl.MatrixMode(gl.PROJECTION)
+	gl.LoadIdentity()
+	gl.Ortho(0, 0, float64(v.w), float64(v.h), -100, 100)
+	gl.Translatef(float32(-v.x), float32(-v.y), 0)
 }
 
 func (v *Viewport) buildTrans() {
