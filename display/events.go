@@ -2,7 +2,7 @@ package display
 
 import (
 	"log"
-	
+
 	"github.com/bluepeppers/allegro"
 )
 
@@ -31,11 +31,9 @@ func (d *DisplayEngine) eventHandler() {
 	}
 }
 
-
 func (d *DisplayEngine) handleResize(ev allegro.DisplayResizeEvent) {
 	d.drawLock.Lock()
 	d.viewport.ResizeViewport(ev.W, ev.H)
 	d.Display.AcknowledgeResize()
 	d.drawLock.Unlock()
 }
-

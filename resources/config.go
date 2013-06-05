@@ -168,7 +168,7 @@ func loadTileConfig(rawConfig *allegro.Config, name, prefix, directory string) (
 	h, _ := strconv.Atoi(split[1])
 	tileConf.W = w
 	tileConf.H = h
-	
+
 	offset, ok := rawConfig.Get(name, "offset")
 	if !ok {
 		offset = "0,0"

@@ -2,13 +2,13 @@ package resources
 
 import (
 	"log"
-	_ "sync"
 	"path"
 	"path/filepath"
+	_ "sync"
 
+	"github.com/bluepeppers/allegro"
 	"github.com/go-gl/gl"
 	"github.com/go-gl/glfw"
-	"github.com/bluepeppers/allegro"
 )
 
 const (
@@ -41,64 +41,64 @@ type ResourceManager struct {
 }
 
 func CreateResourceManager(config *ResourceManagerConfig) *ResourceManager {
-/*	defaultTileConfig := TileConfig{Name: DEFAULT_TILE_NAME, Filename: DEFAULT_TILE_NAME}
-	config.TileConfigs = append(config.TileConfigs, defaultTileConfig)
+	/*	defaultTileConfig := TileConfig{Name: DEFAULT_TILE_NAME, Filename: DEFAULT_TILE_NAME}
+		config.TileConfigs = append(config.TileConfigs, defaultTileConfig)
 
-	tileConfs := make([]TileConfig, 0)
-	for _, v := range config.TileConfigs {
-		tileConfs = append(tileConfs, v)
-	}
-	
-	var manager ResourceManager
+		tileConfs := make([]TileConfig, 0)
+		for _, v := range config.TileConfigs {
+			tileConfs = append(tileConfs, v)
+		}
 
-	nBmps := len(tileConfs)
-	log.Printf("Loading %v bitmaps", nBmps)
+		var manager ResourceManager
 
-	loadedBmps := make([]*allegro.Bitmap, nBmps)
-	manager.tileMetadatas = make([]tileMetadata, nBmps)
-	var wg sync.WaitGroup
-	wg.Add(nBmps)
-	for j := 0; j < nBmps; j++ {
-		go func (i int) {
-			cfg := tileConfs[i]
+		nBmps := len(tileConfs)
+		log.Printf("Loading %v bitmaps", nBmps)
 
-			// Load the bitmap
-			var bmp *allegro.Bitmap
-			if cfg.Name == DEFAULT_TILE_NAME {
-				bmp = allegro.NewBitmap(DEFAULT_TILE_WIDTH, DEFAULT_TILE_HEIGHT)
-			} else {
-				bmp = allegro.LoadBitmap(cfg.Filename)
-			}
-			if bmp == nil {
-				log.Fatalf("Failed to load bmp %v", cfg)
-			}
-			
-			loadedBmps[i] = bmp
-			manager.tileMetadatas[i] = generateMetadata(bmp, cfg)
+		loadedBmps := make([]*allegro.Bitmap, nBmps)
+		manager.tileMetadatas = make([]tileMetadata, nBmps)
+		var wg sync.WaitGroup
+		wg.Add(nBmps)
+		for j := 0; j < nBmps; j++ {
+			go func (i int) {
+				cfg := tileConfs[i]
 
-			wg.Done()
-		} (j)
-	}
-	wg.Wait()
-	log.Printf("Loaded bitmaps")
-	
-	manager.tileBmps = make([]*Bitmap, nBmps)
-	for i, bmp := range loadedBmps {
-		metadata := manager.tileMetadatas[i]
-		fBmp := &Bitmap{gl.Texture(bmp.GetGLTexture()), bmp,
-			metadata.offx, metadata.offy, metadata.w, metadata.h}
-		manager.tileBmps[i] = fBmp
-	}
+				// Load the bitmap
+				var bmp *allegro.Bitmap
+				if cfg.Name == DEFAULT_TILE_NAME {
+					bmp = allegro.NewBitmap(DEFAULT_TILE_WIDTH, DEFAULT_TILE_HEIGHT)
+				} else {
+					bmp = allegro.LoadBitmap(cfg.Filename)
+				}
+				if bmp == nil {
+					log.Fatalf("Failed to load bmp %v", cfg)
+				}
 
-	manager.tilePos = make(map[string]int, nBmps)
-	for i, metadata := range manager.tileMetadatas {
-		manager.tilePos[metadata.name] = i
-	}*/
+				loadedBmps[i] = bmp
+				manager.tileMetadatas[i] = generateMetadata(bmp, cfg)
+
+				wg.Done()
+			} (j)
+		}
+		wg.Wait()
+		log.Printf("Loaded bitmaps")
+
+		manager.tileBmps = make([]*Bitmap, nBmps)
+		for i, bmp := range loadedBmps {
+			metadata := manager.tileMetadatas[i]
+			fBmp := &Bitmap{gl.Texture(bmp.GetGLTexture()), bmp,
+				metadata.offx, metadata.offy, metadata.w, metadata.h}
+			manager.tileBmps[i] = fBmp
+		}
+
+		manager.tilePos = make(map[string]int, nBmps)
+		for i, metadata := range manager.tileMetadatas {
+			manager.tilePos[metadata.name] = i
+		}*/
 
 	var manager ResourceManager
 	manager.tileMetadatas = make(map[string]tileMetadata)
 	manager.tileBmps = make(map[string]Bitmap)
-	
+
 	// Load the fonts
 	manager.fontMap = make(map[string]*allegro.Font)
 	for _, v := range config.FontConfigs {

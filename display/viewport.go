@@ -1,9 +1,9 @@
 package display
 
 import (
-//	"log"
+	//	"log"
 	"math"
-	
+
 	"github.com/bluepeppers/allegro"
 	"github.com/go-gl/gl"
 )
@@ -11,7 +11,7 @@ import (
 var ISOMETRIC_ROTATION = float32(3 * math.Pi / 8)
 
 type Viewport struct {
-	x, y, w, h int
+	x, y, w, h   int
 	xZoom, yZoom float64
 
 	trans allegro.Transform
@@ -57,14 +57,14 @@ func (v *Viewport) buildTrans() {
 
 func (v *Viewport) OnScreen(x, y, w, h int) bool {
 	return !(
-        // Off left side
-        x + w < v.x  ||
-        // Off right side
-        x > v.x + int(float64(v.w) * v.xZoom) ||
-        // Off top
-        y + h < v.y ||
-        // Off bottom
-        y > v.y + int(float64(v.h) * v.yZoom))
+	// Off left side
+	x+w < v.x ||
+		// Off right side
+		x > v.x+int(float64(v.w)*v.xZoom) ||
+		// Off top
+		y+h < v.y ||
+		// Off bottom
+		y > v.y+int(float64(v.h)*v.yZoom))
 }
 
 func (v *Viewport) TileCoordinatesToScreen(tx, ty float64, config DisplayConfig) (float64, float64) {
@@ -91,7 +91,7 @@ func (v *Viewport) ScreenCoordinatesToTile(sx, sy int, config DisplayConfig) (fl
 
 	x, y := trans.Apply(fx, fy)
 	// Then we manually rotate it (because I'm bad at maths I guess)
-	tx := float64(float64(y) * w - float64(x) * h) / (w * h)
-	ty := float64(float64(y) * w + float64(x) * h) / (w * h)
+	tx := float64(float64(y)*w-float64(x)*h) / (w * h)
+	ty := float64(float64(y)*w+float64(x)*h) / (w * h)
 	return tx, ty
 }

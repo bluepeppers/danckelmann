@@ -62,7 +62,7 @@ func LoadFile(filename string) *File {
 			sgfile.Filename, len(sgfile.Images))
 		sgfile.Bitmaps = []*Bitmap{sgfile.Bitmaps[0]}
 	}
-	
+
 	return &sgfile
 }
 
@@ -89,8 +89,8 @@ func (f *File) MaxBitmapRecords() int {
 func (f *File) LoadBitmaps(file *os.File) bool {
 	f.Bitmaps = make([]*Bitmap, f.Header.NumBitmapRecords)
 	for i := 0; int32(i) < f.Header.NumBitmapRecords; i++ {
-		
-		file.Seek(int64(HEADER_SIZE + BITMAP_SIZE * i), 0)
+
+		file.Seek(int64(HEADER_SIZE+BITMAP_SIZE*i), 0)
 		bmp, err := LoadBitmap(file, i)
 		f.Bitmaps[i] = bmp
 		if err != nil {
@@ -98,19 +98,19 @@ func (f *File) LoadBitmaps(file *os.File) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
 func (f *File) LoadImages(file *os.File) bool {
-	f.Images = make([]*Image, f.Header.NumImageRecords + 1)
+	f.Images = make([]*Image, f.Header.NumImageRecords+1)
 	img, err := LoadImage(file, 0)
 	f.Images[0] = img
 	if err != nil {
 		log.Printf("Could not load image 0 from %q: %v", f.Filename, err)
 		return false
 	}
-	for i := 1; int32(i) < f.Header.NumImageRecords + 1; i++ {
+	for i := 1; int32(i) < f.Header.NumImageRecords+1; i++ {
 		//file.Seek(int64(HEADER_SIZE + BITMAP_SIZE * f.MaxBitmapRecords() + IMAGE_SIZE * i), 0)
 		img, err = LoadImage(file, 1)
 		f.Images[i] = img
@@ -125,6 +125,6 @@ func (f *File) LoadImages(file *os.File) bool {
 			f.Bitmaps[bmpId].AddImage(f.Images[i])
 		}
 	}
-	
+
 	return true
 }

@@ -1,13 +1,13 @@
 package display
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"time"
-	"fmt"
 
-	"github.com/go-gl/gl"
 	"github.com/bluepeppers/allegro"
+	"github.com/go-gl/gl"
 
 	"github.com/bluepeppers/danckelmann/config"
 	"github.com/bluepeppers/danckelmann/resources"
@@ -57,13 +57,13 @@ type DisplayEngine struct {
 	statusLock sync.RWMutex
 	running    bool
 
-	drawLock     sync.RWMutex
-	frameDrawing sync.RWMutex // Locked -> Frame drawing atm
-	currentFrame int
-	viewport     Viewport
-	Display      *allegro.Display
-	fps          float64
-	cursorX, cursorY float64    
+	drawLock         sync.RWMutex
+	frameDrawing     sync.RWMutex // Locked -> Frame drawing atm
+	currentFrame     int
+	viewport         Viewport
+	Display          *allegro.Display
+	fps              float64
+	cursorX, cursorY float64
 
 	resourceManager *resources.ResourceManager
 }
@@ -156,7 +156,7 @@ func (d *DisplayEngine) Run() {
 
 	start := time.Now()
 	frames := 0
-	
+
 	for running {
 		d.frameDrawing.Lock()
 		go d.drawFrame()
@@ -199,7 +199,7 @@ func (d *DisplayEngine) drawFrame() {
 			gl.GLclampf(g)/255.0,
 			gl.GLclampf(b)/255.0,
 			gl.GLclampf(a)/255.0)
-		
+
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 
 		viewport.SetupTransform()
@@ -218,25 +218,28 @@ func (d *DisplayEngine) drawFrame() {
 					}
 
 					// Coordinates in terms of pixels
-					px := (y-x)*d.config.TileW/2
-					py := (x+y)*d.config.TileH/2
+					px := (y - x) * d.config.TileW / 2
+					py := (x + y) * d.config.TileH / 2
 					bmp := toDraw[x*d.config.MapW+y][p]
-/*					ox := bmp.OffX
-					oy := bmp.OffY*/
+					/*					ox := bmp.OffX
+										oy := bmp.OffY*/
 					bw, bh := bmp.W, bmp.H
 					if viewport.OnScreen(px, py, bw, bh) {
 						gl.Begin(gl.QUADS)
 						bmp.Tex.Bind(gl.TEXTURE_2D)
-						gl.TexCoord2f(0, 0); gl.Vertex3i(px, py, 0)
-						gl.TexCoord2f(0, 1); gl.Vertex3i(px, py+bw, 0)
-						gl.TexCoord2f(1, 1); gl.Vertex3i(px+bh, py+bw, 0)
-						gl.TexCoord2f(1, 0); gl.Vertex3i(px+bh, py, 0)
+						gl.TexCoord2f(0, 0)
+						gl.Vertex3i(px, py, 0)
+						gl.TexCoord2f(0, 1)
+						gl.Vertex3i(px, py+bw, 0)
+						gl.TexCoord2f(1, 1)
+						gl.Vertex3i(px+bh, py+bw, 0)
+						gl.TexCoord2f(1, 0)
+						gl.Vertex3i(px+bh, py, 0)
 						gl.End()
 					}
 				}
 			}
 		}
-		
 
 		gl.Flush()
 	})

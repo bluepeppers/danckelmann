@@ -159,5 +159,9 @@ func (i *Image) loadIsometricImage(buffer []byte) ([]float32, error) {
 		tileBytes = ISOMETRIC_TILE_BYTES
 		tileHeight = ISOMETRIC_TILE_HEIGHT
 		tileWidth = ISOMETRIC_TILE_WIDTH
+	} else ISOMETRIC_LARGE_TYPE_BITES * size == height {
+		tileBytes = ISOMETRIC_LARGE_TILE_BYTES
+		tileHeight = ISOMETRIC_LARGE_TILE_HEIGHT
+		tileWidth = ISOMETRIC_LARGE_TILE_WIDTH
 	}
 }
