@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 	"time"
+	"path/filepath"
 
 	"github.com/bluepeppers/allegro"
 	"github.com/go-gl/gl"
@@ -78,11 +79,7 @@ func CreateDisplayEngine(resourceDir string, conf *allegro.Config, gameEngine Ga
 		wg.Done()
 	}()
 	go func() {
-		conf, ok := resources.LoadResourceManagerConfig(resourceDir, "")
-		if !ok {
-			log.Fatalf("Could not load resource manager config from %q", resourceDir)
-		}
-		displayEngine.resourceManager = resources.CreateResourceManager(conf)
+		displayEngine.resourceManager = createResourceManager(conf)
 		wg.Done()
 	}()
 	wg.Wait()
@@ -97,6 +94,17 @@ func CreateDisplayEngine(resourceDir string, conf *allegro.Config, gameEngine Ga
 	(*displayEngine.gameEngine).RegisterDisplayEngine(&displayEngine)
 
 	return &displayEngine
+}
+
+func createResourceManager(conf *allegro.Config) (*resources.ResourceManager, error) {
+	rm := resources.CreateResourceManager()
+	if rm == nil {
+		return nil, fmt.Errorf("Could not create new resource manager")
+	}
+	dataDir := config.GetString(conf, "data", "asset_dir", "./DATA")
+	sg3Files, err := filepath.Glob(dataDir + "/" + "*.sg3")
+	if err {
+	}
 }
 
 func createDisp(conf *allegro.Config) *allegro.Display {
