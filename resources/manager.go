@@ -17,23 +17,26 @@ const (
 	DEFAULT_GRAPHIC_HEIGHT = 128
 )
 
-var DEFAULT_GRAPHIC_DATA uint32[];
+var DEFAULT_GRAPHIC_DATA []uint32;
 
+// Generate some random pixel data for the default graphic
 func init() {
-	DEFAULT_GRAPHIC_DATA = make(uint32[], DEFAULT_GRAPHIC_WIDTH * DEFAULT_GRAPHIC_HEIGHT)
+	DEFAULT_GRAPHIC_DATA = make([]uint32, DEFAULT_GRAPHIC_WIDTH * DEFAULT_GRAPHIC_HEIGHT)
 	for x := 0; x < DEFAULT_GRAPHIC_WIDTH; x++ {
 		for y := 0; y < DEFAULT_GRAPHIC_HEIGHT; y++ {
+			fw := float64(DEFAULT_GRAPHIC_WIDTH)
+			fh := float64(DEFAULT_GRAPHIC_HEIGHT)
 			p := y * DEFAULT_GRAPHIC_WIDTH + x
 
 			// Something funky
-			fr := math.Cos(y/DEFAULT_GRAPHIC_WIDTH)
-			fg := math.Sin(x/DEFAULT_GRAPHIC_WIDTH)
-			fb := math.Tan(p/len(DEFAULT_GRAPHIC_DATA))
+			fr := math.Cos(float64(y)/fw)
+			fg := math.Sin(float64(x)/fh)
+			fb := math.Tan(float64(p)/float64(len(DEFAULT_GRAPHIC_DATA)))
 
-			r := byte(fr * 255)
-			g := byte(fg * 255)
-			b := byte(fb * 255)
-			a := 255
+			r := uint32(fr * 255)
+			g := uint32(fg * 255)
+			b := uint32(fb * 255)
+			a := uint32(255)
 			DEFAULT_GRAPHIC_DATA[p] =
 				(r << 6) |
 				(g << 4) |
@@ -121,7 +124,7 @@ func (rm *ResourceManager) LoadSG3File(filenameSG3, filename555, prefix string) 
 			dataFile = filename555
 		}
 		go func () {
-			err := rm.loadImage(img, name, dataFile)
+			err := rm.loadImage(img, dataFile)
 			if err != nil {
 				// Non blocking send
 				select {
@@ -136,7 +139,7 @@ func (rm *ResourceManager) LoadSG3File(filenameSG3, filename555, prefix string) 
 	return err
 }
 
-func (rm *ResourceManager) loadImage(img *libsg.Image, name, dataFile string) error {
+func (rm *ResourceManager) loadImage(img *libsg.Image, dataFile string) error {
 	bmpName := strings.TrimSuffix(bmp.Filename(), ".bmp")
 	name := fmt.Sprintf("%v.%v.%v", prefix, bmpName, img.ID())
 	
