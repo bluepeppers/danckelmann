@@ -79,7 +79,10 @@ func CreateDisplayEngine(resourceDir string, conf *allegro.Config, gameEngine Ga
 		wg.Done()
 	}()
 	go func() {
-		displayEngine.resourceManager = createResourceManager(conf)
+		displayEngine.resourceManager, err = createResourceManager(conf)
+		if err != nil {
+			fmt.Fatalf(err)
+		}
 		wg.Done()
 	}()
 	wg.Wait()
@@ -101,10 +104,22 @@ func createResourceManager(conf *allegro.Config) (*resources.ResourceManager, er
 	if rm == nil {
 		return nil, fmt.Errorf("Could not create new resource manager")
 	}
-	dataDir := config.GetString(conf, "data", "asset_dir", "./DATA")
-	sg3Files, err := filepath.Glob(dataDir + "/" + "*.sg3")
-	if err {
+	dataDir := config.GetString(conf, "data", "asset_dir", "DATA")
+	sg3Files, err := filepath.Glob(filepath.Join(dataDir, "*.(sg|SG)3")
+	if err != nil {
+		return nil, err
 	}
+	for _, fileSG3 := range sg3Files {
+		prefix := strings.TrimSuffix(strings.TrimSuffix(fileSG3, ".sg3"), ".SG3")
+		file555 := prefix + ".555"
+		// Images are already loaded in parallel here, not sure it's worth
+		// doing these calls in a seperate routine
+		err = rm.LoadSG3File(fileSG3, file555, prefix)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return rm, nil
 }
 
 func createDisp(conf *allegro.Config) *allegro.Display {
