@@ -6,6 +6,8 @@ import (
 
 	"github.com/bluepeppers/allegro"
 	"github.com/go-gl/gl"
+
+	"github.com/bluepeppers/danckelmann/resources"
 )
 
 var ISOMETRIC_ROTATION = float32(3 * math.Pi / 8)
@@ -29,7 +31,7 @@ func (v *Viewport) ResizeViewport(w, h int) {
 	v.w = w
 	v.h = h
 	v.buildTrans()
-	allegro.RunInThread(func() {
+	resources.RunInThread(func() {
 		gl.Viewport(0, 0, w, h)
 	})
 }
