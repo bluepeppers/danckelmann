@@ -1,9 +1,9 @@
 package resources
 
 import (
-	//	"log"
 	"fmt"
 	"path"
+	"strings"
 	"sync"
 )
 
@@ -25,9 +25,14 @@ var (
 )
 
 // Registers the loader. Returns an error if any of the loader's extensions
-// have already been registered.
+// have already been registered. Extensions are case insensitive
 func RegisterLoader(loader GraphicLoader) error {
 	extensions := loader.Extensions()
+
+	// Make them all lowercase
+	for i := 0; i < len(extensions); i++ {
+		extensions[i] = strings.ToLower(extensions[i])
+	}
 
 	loadersMutex.RLock()
 	// Check that all the extensions are unique
@@ -53,7 +58,7 @@ func RegisterLoader(loader GraphicLoader) error {
 func GetLoader(extension string) (GraphicLoader, bool) {
 	loadersMutex.RLock()
 	defer loadersMutex.RUnlock()
-	loader, ok := registeredLoaders[extension]
+	loader, ok := registeredLoaders[strings.ToLower(extension)]
 	return loader, ok
 }
 
