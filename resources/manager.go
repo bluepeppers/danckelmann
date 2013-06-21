@@ -1,12 +1,11 @@
 package resources
 
 import (
-	"log"
 	"fmt"
+	"log"
 	"math"
 	"sync"
 
-	libsg "github.com/bluepeppers/libsg/golibsg"
 	"github.com/bluepeppers/allegro"
 	"github.com/go-gl/gl"
 )
@@ -17,21 +16,21 @@ const (
 	DEFAULT_GRAPHIC_HEIGHT = 128
 )
 
-var DEFAULT_GRAPHIC_DATA []uint32;
+var DEFAULT_GRAPHIC_DATA []uint32
 
 // Generate some random pixel data for the default graphic
 func init() {
-	DEFAULT_GRAPHIC_DATA = make([]uint32, DEFAULT_GRAPHIC_WIDTH * DEFAULT_GRAPHIC_HEIGHT)
+	DEFAULT_GRAPHIC_DATA = make([]uint32, DEFAULT_GRAPHIC_WIDTH*DEFAULT_GRAPHIC_HEIGHT)
 	for x := 0; x < DEFAULT_GRAPHIC_WIDTH; x++ {
 		for y := 0; y < DEFAULT_GRAPHIC_HEIGHT; y++ {
 			fw := float64(DEFAULT_GRAPHIC_WIDTH)
 			fh := float64(DEFAULT_GRAPHIC_HEIGHT)
-			p := y * DEFAULT_GRAPHIC_WIDTH + x
+			p := y*DEFAULT_GRAPHIC_WIDTH + x
 
 			// Something funky
-			fr := math.Cos(float64(y)/fw)
-			fg := math.Sin(float64(x)/fh)
-			fb := math.Tan(float64(p)/float64(len(DEFAULT_GRAPHIC_DATA)))
+			fr := math.Cos(float64(y) / fw)
+			fg := math.Sin(float64(x) / fh)
+			fb := math.Tan(float64(p) / float64(len(DEFAULT_GRAPHIC_DATA)))
 
 			r := uint32(fr * 255)
 			g := uint32(fg * 255)
@@ -39,9 +38,9 @@ func init() {
 			a := uint32(255)
 			DEFAULT_GRAPHIC_DATA[p] =
 				(r << 6) |
-				(g << 4) |
-				(b << 2) |
-				(a << 0)
+					(g << 4) |
+					(b << 2) |
+					(a << 0)
 		}
 	}
 }
@@ -52,11 +51,12 @@ type Graphic struct {
 	// The offset of the graphic when drawing
 	OffX, OffY int
 	// Dimensions
-	W, H int
+	Width, Height int
 }
 
 type ResourceManager struct {
-	tileGraphics map[string]Graphic
+	graphicsMutex sync.RWMutex
+	graphics      map[string]Graphic
 
 	fontMap map[string]*allegro.Font
 }
@@ -64,155 +64,76 @@ type ResourceManager struct {
 func CreateResourceManager() *ResourceManager {
 	var manager ResourceManager
 
-	manager.tileGraphics = make(map[string]Graphic)
+	manager.graphics = make(map[string]Graphic)
 	manager.addDefaultGraphic()
 
 	manager.fontMap = make(map[string]*allegro.Font)
-	manager.fontMap["builtin"] = allegro.CreateBuiltinFont()
-
+	RunInThread(func() {
+		manager.fontMap["builtin"] = allegro.CreateBuiltinFont()
+	})
 	return &manager
 }
 
 func (rm *ResourceManager) addDefaultGraphic() {
 	var graphic Graphic
-	allegro.RunInThread(func() {
+	RunInThread(func() {
 		graphic.Tex = gl.GenTexture()
 		graphic.Tex.Bind(gl.TEXTURE_2D)
 
 		// Maybe REPEAT will be more noticable?
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
-		
+
 		// Why not
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
-		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32,
+		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA,
 			DEFAULT_GRAPHIC_WIDTH, DEFAULT_GRAPHIC_HEIGHT,
-			0, gl.RGBA32, DEFAULT_GRAPHIC_DATA)
+			0, gl.RGBA, gl.UNSIGNED_INT_8_8_8_8, DEFAULT_GRAPHIC_DATA)
 	})
 	graphic.Width = DEFAULT_GRAPHIC_WIDTH
 	graphic.Height = DEFAULT_GRAPHIC_HEIGHT
-	
-	rm.tileGraphics[DEFAULT_GRAPHIC_NAME] = graphic
+
+	rm.graphics[DEFAULT_GRAPHIC_NAME] = graphic
 }
 
-func (rm *ResourceManager) LoadSG3File(filenameSG3, filename555, prefix string) error {
-	file, err := libsg.ReadFile(filename)
-	if err {
-		return err
-	}
-	imgs, err := file.Images()
-	if err != nil {
-		return err
+// Adds the graphic to the resource manager with the given name. Overwrites
+// existing graphics with the same name.
+func (rm *ResourceManager) AddGraphic(name string, graphic Graphic) {
+	if name == DEFAULT_GRAPHIC_NAME {
+		log.Fatalf("Cannot add graphic with default name %q", name)
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(imgs) + 1)
-
-	errChan := make(chan error)
-
-	go func() {
-		err = nil
-		err <- errChan
-		wg.Done()
-	} ()
-
-	for _, img := range imgs {
-		dataFile := filenameSG3
-		if img.IsExtern() {
-			dataFile = filename555
-		}
-		go func () {
-			err := rm.loadImage(img, dataFile)
-			if err != nil {
-				// Non blocking send
-				select {
-				case errChan <- err:
-				default:
-				}
-			}
-			wg.Done()
-		} ()
-	}
-	wg.Wait()
-	return err
+	rm.graphicsMutex.Lock()
+	defer rm.graphicsMutex.Unlock()
+	rm.graphics[name] = graphic
 }
 
-func (rm *ResourceManager) loadImage(img *libsg.Image, dataFile string) error {
-	bmpName := strings.TrimSuffix(bmp.Filename(), ".bmp")
-	name := fmt.Sprintf("%v.%v.%v", prefix, bmpName, img.ID())
-	
-	imgData := img.LoadData(dataFile)
-	tex, err := img.loadTexture(imgData)
-	if err != nil {
-		return err
-	}
-	var graphic Graphic
-	graphic.Tex = tex
-	graphic.W = imgData.Width
-	graphic.H = imgData.Height
-
-	rm.tileGraphics[name] = graphic
-	return nil
-}
-
-func (rm *ResourceManager) loadTexture(imgData *libsg.SgImageData) (gl.Texture, error) {
-	// We only support ARGB32 from libsg (convert to RGBA later)
-	if imgData.BMask != 0xff ||
-		imgData.GMask != 0xff00 ||
-		imgData.RMask != 0xff0000 ||
-		imgData.AMask != 0xff000000 {
-		return gl.Texture(0), fmt.Errorf("Unsupport image format for %q", name)
-	}
-
-	// Convert the argb to rgba
-	for i := range imgData {
-		imgData[i] = (imgData[i] & (~imgData.AMask)) << 2 | (imgData[i] & imgData.AMask) >> 6
-	}
-
-	var tex gl.Texture
-	allegro.RunInThread(func() {
-		tex = gl.GenTexture()
-		tex.Bind(gl.TEXTURE_2D)
-
-		// Why not
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-		
-		// To keep pixely art, GL_NEAREST
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-
-		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA32,
-			imgData.Width, imgData.Height,
-			0, gl.RGBA32, imgData.Data)
-	})
-	return tex, nil
-}
-
-func (rm *ResourceManager) GetGraphic(name string) (Graphic, error) {
-	graphic, ok := rm.tileGraphics[name]
+func (rm *ResourceManager) GetGraphic(name string) (*Graphic, error) {
+	rm.graphicsMutex.RLock()
+	defer rm.graphicsMutex.RUnlock()
+	graphic, ok := rm.graphics[name]
 	if !ok {
-		return Graphic{}, fmt.Errorf("Could not find graphic %q", name)
+		return nil, fmt.Errorf("Could not find graphic %q", name)
 	}
-	return &bmp, nil
+	return &graphic, nil
 }
 
 // Gets a tile that can be drawn, no matter what. Won't be pretty, but won't crash.
-func (rm *ResourceManager) GetDefaultGraphic() *Bitmap {
-	sub, ok := rm.GetGraphic(DEFAULT_GRAPHIC_NAME)
-	if !ok {
-		log.Panicf("Could not find default graphic %q", DEFAULT_TILE_NAME)
+func (rm *ResourceManager) GetDefaultGraphic() *Graphic {
+	sub, err := rm.GetGraphic(DEFAULT_GRAPHIC_NAME)
+	if err != nil {
+		log.Fatalf("Could not find default graphic %q", DEFAULT_GRAPHIC_NAME)
 	}
 	return sub
 }
 
-func (rm *ResourceManager) GetGraphicOrDefault(name string) *Bitmap {
-	graphic, ok := rm.GetGraphic(name)
-	if !ok {
+func (rm *ResourceManager) GetGraphicOrDefault(name string) *Graphic {
+	graphic, err := rm.GetGraphic(name)
+	if err != nil {
 		log.Printf("Could not find graphic named %q. Defaulting to default graphic.", name)
-		return rm.GetDefaultTile()
+		return rm.GetDefaultGraphic()
 	}
 	return graphic
 }
