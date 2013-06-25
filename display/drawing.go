@@ -3,14 +3,55 @@ package display
 import (
 	"fmt"
 	"time"
+	"container/heap"
 
 	"github.com/bluepeppers/allegro"
-	"github.com/go-gl/gl"
 
 	"github.com/bluepeppers/danckelmann/resources"
+	"github.com/bluepeppers/danckelmann/utils/priorityqueue"
 )
 
-func (d *DisplayEngine) Run() {
+type RendererConfig struct {
+	TileWidth, TileHeight int
+	Viewport Viewport
+	TextColor, BackgroundColor allegro.Color
+	Font *allegro.Font
+}
+
+// The rendering backend.
+type RenderingBackend interface {
+	// The name of the backend. For logging purposes and jazz
+	Name() string
+
+	// Set up various matricies etc
+	SetupFrame(RendererConfig)
+
+	// Draws a drawable
+	Draw(Drawable)
+
+	// Draws the text to the given position
+	DrawText(string, int, int)
+
+	// Sets the entire screen to the background color
+	ClearBackground()
+
+	// Flip the backbuffer etc
+	EndFrame()
+}
+
+type Drawable interface {
+	// Lower layers are drawn before higher ones
+	Layer() int
+
+	// The lowest position of the tiles occupied by the drawable. Tiles lower
+	// down will be drawn after tiles closer to the top of the screen
+	Position() (int, int)
+
+	// The graphics to be drawn
+	Graphics() []resources.Graphic
+}
+
+func (d *DisplayEngine) Run(backend RenderingBackend) {
 	running := true
 	d.statusLock.Lock()
 	d.running = true
@@ -23,7 +64,7 @@ func (d *DisplayEngine) Run() {
 
 	for running {
 		d.frameDrawing.Lock()
-		go d.drawFrame()
+		go d.drawFrame(backend)
 		frames++
 		if frames >= 30 {
 			d.fps = float64(frames) / time.Since(start).Seconds()
@@ -37,89 +78,67 @@ func (d *DisplayEngine) Run() {
 	}
 }
 
-func (d *DisplayEngine) drawFrame() {
-	// Get all of the graphics to be drawn, and put them into a big array
-	toDraw := make([][]*resources.Graphic, d.config.MapW*d.config.MapH)
-	drawPasses := 0
-	for x := 0; x < d.config.MapW; x++ {
-		for y := 0; y < d.config.MapH; y++ {
-			toDraw[x*d.config.MapW+y] = d.gameEngine.GetTile(x, y)
-			length := len(toDraw[x*d.config.MapW+y])
-			if length > drawPasses {
-				drawPasses = length
+func (d *DisplayEngine) drawFrame(renderer RenderingBackend) {
+	// Get all of the graphics to be drawn, and put them into a PriorityQueue
+	// for drawing
+	toDraw := (*priorityqueue.PriorityQueue)(&[]*priorityqueue.Item{})
+	heap.Init(toDraw)
+
+	for i := 0;; i++{
+		drawable, ok := d.gameEngine.GetDrawable(i)
+		if !ok {
+			break
+		}
+		dx, dy := drawable.Position()
+		dLayer := drawable.Layer()
+
+		// Layer > Y coord > X coord
+		priority := dLayer * d.config.MapW * d.config.MapH +
+			dy * d.config.MapW +
+			dx
+
+		heap.Push(toDraw, &priorityqueue.Item{Value: drawable, Priority: priority})
+	}
+	
+	config := RendererConfig{
+		d.config.TileW, d.config.TileH,
+		d.viewport,
+		allegro.CreateColor(255, 0, 0, 0),
+		allegro.CreateColor(0, 0, 255, 0),
+		allegro.CreateBuiltinFont()}
+
+	renderer.SetupFrame(config)
+
+	renderer.ClearBackground()
+
+	for toDraw.Len() != 0 {
+		drawable := heap.Pop(toDraw).(priorityqueue.Item).Value.(Drawable)
+		// The coordinates in the tile system
+		tileX, tileY := drawable.Position()
+
+		// The coordinates in the pixel system
+		pixelX := (y - x) * config.TileWidth / 2
+		pixelY := (y + x) * config.TileHeight / 2
+		// Width & Height is the largest of the graphic properties
+		pixelWidth := 0
+		pixelHeight := 0
+		for _, graphic := range drawable.Graphics {
+			if graphic.Width > pixelWidth {
+				pixelWidth = graphic.Width
 			}
+			if graphic.Height > pixelHeight {
+				pixelHeight = graphic.Height
+			}
+		}
+		
+		if config.Viewport.OnScreen(pixelX, pixelY, pixelWidth, pixelHeight) {
+			renderer.Draw(drawable)
 		}
 	}
 
-	viewport := d.viewport
+	renderer.DrawText(fmt.Sprint(int(d.fps)), 0, 0)
 
-	resources.RunInThread(func() {
-		// Don't want anyone changing the viewport mid frame or any such highjinks
-		d.Display.SetTargetBackbuffer()
-
-		r, g, b, a := d.config.BGColor.GetRGBA()
-		gl.ClearColor(
-			gl.GLclampf(r)/255.0,
-			gl.GLclampf(g)/255.0,
-			gl.GLclampf(b)/255.0,
-			gl.GLclampf(a)/255.0)
-
-		gl.Clear(gl.COLOR_BUFFER_BIT)
-
-		viewport.SetupTransform()
-
-		for pass := 0; pass < drawPasses; pass++ {
-			mapW := d.config.MapW
-			mapH := d.config.MapH
-			// Iterate through the map coordinates diagonally
-			for s := 0; s < mapW+mapH; s++ {
-				for x := 0; x < s; x++ {
-					y := s - x - 1
-					if x >= mapW || y < 0 || y >= mapH {
-						continue
-					}
-					// If this tile doesn't have any graphics on this pass, cont.
-					if len(toDraw[x*d.config.MapW+y]) < p {
-						continue
-					}
-
-					// Coordinates in terms of pixels
-					px := (y - x) * d.config.TileW / 2
-					py := (x + y) * d.config.TileH / 2
-					graphic := toDraw[x*d.config.MapW+y][p]
-					/*					ox := bmp.OffX
-										oy := bmp.OffY*/
-					gw, gh := graphic.Width, graphic.Height
-					if viewport.OnScreen(px, py, gw, gh) {
-						gl.Begin(gl.QUADS)
-						graphic.Tex.Bind(gl.TEXTURE_2D)
-						gl.TexCoord2f(0, 0)
-						gl.Vertex3i(px, py, 0)
-						gl.TexCoord2f(0, 1)
-						gl.Vertex3i(px, py+gw, 0)
-						gl.TexCoord2f(1, 1)
-						gl.Vertex3i(px+gh, py+gw, 0)
-						gl.TexCoord2f(1, 0)
-						gl.Vertex3i(px+gh, py, 0)
-						gl.End()
-					}
-				}
-			}
-		}
-
-		gl.Flush()
-
-		var trans allegro.Transform
-		trans.Identity()
-		trans.Use()
-
-		font, err := d.resourceManager.GetFont("builtin")
-		if err == nil {
-			font.Draw(allegro.CreateColor(0, 255, 0, 255), 0, 0, 0, fmt.Sprint(int(d.fps)))
-		}
-
-		allegro.Flip()
-	})
+	renderer.EndFrame()
 
 	d.frameDrawing.Unlock()
 }

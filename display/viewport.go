@@ -13,48 +13,13 @@ import (
 var ISOMETRIC_ROTATION = float32(3 * math.Pi / 8)
 
 type Viewport struct {
-	x, y, w, h   int
-	xZoom, yZoom float64
-
-	trans allegro.Transform
-}
-
-func CreateViewport(x, y, w, h int, xZoom, yZoom float64) Viewport {
-	var v Viewport
-	v.x, v.y, v.w, v.h = x, y, w, h
-	v.xZoom, v.yZoom = xZoom, yZoom
-	v.buildTrans()
-	return v
-}
-
-func (v *Viewport) ResizeViewport(w, h int) {
-	v.w = w
-	v.h = h
-	v.buildTrans()
-	resources.RunInThread(func() {
-		gl.Viewport(0, 0, w, h)
-	})
+	X, Y, W, H   int
+	XZoom, YZoom float64
 }
 
 func (v *Viewport) Move(dx, dy int) {
 	v.x += dx
 	v.y += dy
-}
-
-func (v *Viewport) GetTransform() *allegro.Transform {
-	return &v.trans
-}
-
-func (v *Viewport) SetupTransform() {
-	gl.MatrixMode(gl.PROJECTION)
-	gl.LoadIdentity()
-	gl.Ortho(0, 0, float64(v.w), float64(v.h), -100, 100)
-	gl.Translatef(float32(-v.x), float32(-v.y), 0)
-}
-
-func (v *Viewport) buildTrans() {
-	v.trans.Identity()
-	v.trans.Build(float32(-v.x), float32(-v.y), float32(v.xZoom), float32(v.yZoom), 0)
 }
 
 func (v *Viewport) OnScreen(x, y, w, h int) bool {

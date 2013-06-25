@@ -27,7 +27,7 @@ type GameEngine interface {
 	// For best results, make sure that the bitmaps all share a common
 	// parent. This is done automatically if they are loaded via a
 	// resouces.ResourceManager
-	GetTile(int, int) []*resources.Graphic
+	GetDrawable(int) (Drawable, bool)
 
 	// Passes a fully initialized DisplayEngine to the GameEngine. This
 	// allows the GameEngine to inform the DisplayEngine of changes of state
