@@ -81,7 +81,7 @@ func CreateDisplayEngine(resourceDir string, conf *allegro.Config, gameEngine Ga
 	displayEngine.running = false
 
 	w, h := displayEngine.Display.GetDimensions()
-	displayEngine.viewport = CreateViewport(-w/2, -h/w, w, h, 1.0, 1.0)
+	displayEngine.viewport = Viewport{-w / 2, -h / w, w, h, 1.0, 1.0}
 
 	displayEngine.gameEngine = gameEngine
 	displayEngine.config = displayEngine.gameEngine.GetDisplayConfig()

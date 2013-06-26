@@ -1,9 +1,9 @@
 package display
 
 import (
+	"container/heap"
 	"fmt"
 	"time"
-	"container/heap"
 
 	"github.com/bluepeppers/allegro"
 
@@ -12,10 +12,10 @@ import (
 )
 
 type RendererConfig struct {
-	TileWidth, TileHeight int
-	Viewport Viewport
+	TileWidth, TileHeight      int
+	Viewport                   Viewport
 	TextColor, BackgroundColor allegro.Color
-	Font *allegro.Font
+	Font                       *allegro.Font
 }
 
 // The rendering backend.
@@ -84,7 +84,7 @@ func (d *DisplayEngine) drawFrame(renderer RenderingBackend) {
 	toDraw := (*priorityqueue.PriorityQueue)(&[]*priorityqueue.Item{})
 	heap.Init(toDraw)
 
-	for i := 0;; i++{
+	for i := 0; ; i++ {
 		drawable, ok := d.gameEngine.GetDrawable(i)
 		if !ok {
 			break
@@ -93,13 +93,13 @@ func (d *DisplayEngine) drawFrame(renderer RenderingBackend) {
 		dLayer := drawable.Layer()
 
 		// Layer > Y coord > X coord
-		priority := dLayer * d.config.MapW * d.config.MapH +
-			dy * d.config.MapW +
+		priority := dLayer*d.config.MapW*d.config.MapH +
+			dy*d.config.MapW +
 			dx
 
 		heap.Push(toDraw, &priorityqueue.Item{Value: drawable, Priority: priority})
 	}
-	
+
 	config := RendererConfig{
 		d.config.TileW, d.config.TileH,
 		d.viewport,
@@ -130,7 +130,7 @@ func (d *DisplayEngine) drawFrame(renderer RenderingBackend) {
 				pixelHeight = graphic.Height
 			}
 		}
-		
+
 		if config.Viewport.OnScreen(pixelX, pixelY, pixelWidth, pixelHeight) {
 			renderer.Draw(drawable)
 		}

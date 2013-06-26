@@ -5,9 +5,6 @@ import (
 	"math"
 
 	"github.com/bluepeppers/allegro"
-	"github.com/go-gl/gl"
-
-	"github.com/bluepeppers/danckelmann/resources"
 )
 
 var ISOMETRIC_ROTATION = float32(3 * math.Pi / 8)
@@ -18,25 +15,25 @@ type Viewport struct {
 }
 
 func (v *Viewport) Move(dx, dy int) {
-	v.x += dx
-	v.y += dy
+	v.X += dx
+	v.Y += dy
 }
 
 func (v *Viewport) OnScreen(x, y, w, h int) bool {
 	return !(
 	// Off left side
-	x+w < v.x ||
+	x+w < v.X ||
 		// Off right side
-		x > v.x+int(float64(v.w)*v.xZoom) ||
+		x > v.X+int(float64(v.W)*v.XZoom) ||
 		// Off top
-		y+h < v.y ||
+		y+h < v.Y ||
 		// Off bottom
-		y > v.y+int(float64(v.h)*v.yZoom))
+		y > v.Y+int(float64(v.H)*v.YZoom))
 }
 
 func (v *Viewport) TileCoordinatesToScreen(tx, ty float64, config DisplayConfig) (float64, float64) {
 	var trans allegro.Transform
-	trans.Build(float32(-v.x), float32(-v.y), float32(v.xZoom), float32(v.yZoom),
+	trans.Build(float32(-v.X), float32(-v.Y), float32(v.XZoom), float32(v.YZoom),
 		ISOMETRIC_ROTATION)
 	x, y := trans.Apply(float32(tx), float32(ty))
 	return float64(x), float64(y)
@@ -49,7 +46,7 @@ func (v *Viewport) ScreenCoordinatesToTile(sx, sy int, config DisplayConfig) (fl
 	var trans allegro.Transform
 	trans.Identity()
 	// Builds the viewport alignment matrix
-	trans.Build(float32(-v.x), float32(-v.y), float32(v.xZoom), float32(v.yZoom),
+	trans.Build(float32(-v.X), float32(-v.Y), float32(v.XZoom), float32(v.YZoom),
 		0)
 	// Invert it to get back to pixel coordinates
 	trans.Invert()
