@@ -117,12 +117,12 @@ func (d *DisplayEngine) drawFrame(renderer RenderingBackend) {
 		tileX, tileY := drawable.Position()
 
 		// The coordinates in the pixel system
-		pixelX := (y - x) * config.TileWidth / 2
-		pixelY := (y + x) * config.TileHeight / 2
+		pixelX := (tileY - tileX) * config.TileWidth / 2
+		pixelY := (tileY + tileX) * config.TileHeight / 2
 		// Width & Height is the largest of the graphic properties
 		pixelWidth := 0
 		pixelHeight := 0
-		for _, graphic := range drawable.Graphics {
+		for _, graphic := range drawable.Graphics() {
 			if graphic.Width > pixelWidth {
 				pixelWidth = graphic.Width
 			}
